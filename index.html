@@ -1,0 +1,878 @@
+<!doctype html>
+<html lang="en" data-lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Software · ReLeaf · GEMS-Taiwan iGEM 2026</title>
+<meta name="description" content="The ReLeaf BR-01 bioreactor operator interface: architecture, input and output specification anchored on Castillo-Hair 2019, model inventory, an honest digital-twin scorecard, and the wet-lab data still needed to validate it.">
+<!--
+  ReLeaf · GEMS-Taiwan · iGEM 2026 Biomanufacturing Village
+  Standard page: /software
+
+  RULES THIS PAGE WAS WRITTEN UNDER (WikiHomepage/PROJECT_BRIEF.md)
+    · Never invent a number, quote, date or result. Every figure here resolves
+      to a named file in the project. Where a number is borrowed from the
+      literature it says so in the same sentence, at the same type size.
+    · No cost claim about the bioreactor. There is no bill of materials total,
+      so the words cheap / low-cost / affordable and any per-unit price are
+      forbidden anywhere on this page.
+    · Do not infer from silence. A missing fact is written as missing.
+    · Sentence-case headings. No em dashes.
+
+  Self-contained: one file, no build step, no CDN, no external font, no network
+  call. Images are relative paths under assets/.
+-->
+<style>
+:root{
+  --ink:#12211a; --ink2:#3d5148; --ink3:#6b7f75;
+  --line:#dce5e0; --line2:#c3d3cb;
+  --bg:#fff; --bg2:#f4f8f6; --bg3:#eaf2ee;
+  --green:#124734; --green2:#1c6a4d; --accent:#2f9e73;
+  --warn:#c2762a; --bad:#b4483c; --info:#3a6ea8;
+  --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans TC","PingFang TC","Microsoft JhengHei",Roboto,Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.72 var(--sans);-webkit-font-smoothing:antialiased}
+.wrap{max-width:940px;margin:0 auto;padding:0 24px}
+h1,h2,h3,h4{line-height:1.32;font-weight:650;margin:0}
+h2{font-size:24px;margin:64px 0 8px;padding-top:26px;border-top:1px solid var(--line)}
+h2 .lead{display:block;font:400 14.5px/1.65 var(--sans);color:var(--ink3);margin-top:8px;max-width:62em}
+h3{font-size:17.5px;margin:32px 0 8px}
+h4{font-size:15px;margin:22px 0 6px;color:var(--ink2)}
+p{margin:12px 0;max-width:70em}
+a{color:var(--green2)}
+a:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+code{font-family:var(--mono);font-size:.88em;background:var(--bg2);border:1px solid var(--line);border-radius:4px;padding:1px 5px}
+.num,.n{font-family:var(--mono);font-variant-numeric:tabular-nums}
+[data-lang="zh"] .en,[data-lang="en"] .zh{display:none}
+[data-lang="zh"] body,[data-lang="zh"] p{line-height:1.85}
+ul,ol{max-width:70em}
+li{margin:6px 0}
+
+/* language bar */
+.langbar{position:sticky;top:0;z-index:30;background:rgba(255,255,255,.95);border-bottom:1px solid var(--line);backdrop-filter:blur(8px)}
+.langbar .wrap{display:flex;justify-content:space-between;align-items:center;height:46px;gap:12px}
+.langbar b{font:600 11.5px/1 var(--mono);letter-spacing:.09em;color:var(--ink3);text-transform:uppercase}
+.tog{display:flex;border:1px solid var(--line2);border-radius:6px;overflow:hidden;flex:none}
+.tog button{border:0;background:#fff;color:var(--ink3);font:600 12px var(--sans);padding:6px 14px;cursor:pointer}
+.tog button[aria-pressed="true"]{background:var(--green);color:#fff}
+
+/* hero */
+.hero{background:var(--green);color:#e9f3ee;padding:52px 0 46px}
+.hero .eyebrow{font:600 11.5px/1.6 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:#8fc7ae;margin-bottom:18px}
+.hero h1{font-size:clamp(27px,4vw,38px);color:#fff;max-width:20em;letter-spacing:-.01em}
+.hero .sub{color:#bcdccc;margin-top:16px;max-width:44em;font-size:17px}
+.hero .meta{margin-top:26px;display:flex;flex-wrap:wrap;gap:8px}
+.hero .meta span{font:600 11.5px/1 var(--mono);letter-spacing:.05em;background:rgba(255,255,255,.12);
+  border:1px solid rgba(255,255,255,.2);border-radius:999px;padding:7px 12px;color:#d6ece0}
+.hero .panel{background:rgba(0,0,0,.24);border:1px solid rgba(255,255,255,.14);border-radius:10px;
+  padding:20px 22px;margin-top:28px;color:#cfe6da;font-size:15px}
+.hero .panel b{color:#fff}
+.hero .panel a{color:#9fe0bd}
+
+/* contents */
+.toc{background:var(--bg2);border:1px solid var(--line);border-radius:10px;padding:18px 22px;margin:34px 0}
+.toc ol{margin:0;padding-left:1.35em;columns:2;column-gap:32px;font-size:14.5px}
+.toc li{margin:4px 0;break-inside:avoid}
+@media(max-width:640px){.toc ol{columns:1}}
+
+/* notes */
+.note{border-left:3px solid var(--accent);background:var(--bg2);padding:14px 18px;margin:20px 0;
+  border-radius:0 7px 7px 0;font-size:14.5px}
+.note.warn{border-left-color:var(--warn);background:#fdf6ec}
+.note.bad{border-left-color:var(--bad);background:#fcf0ee}
+.note.info{border-left-color:var(--info);background:#eff4fa}
+.note p:first-child{margin-top:0}.note p:last-child{margin-bottom:0}
+.note b{color:var(--ink)}
+
+/* tables */
+.tw{overflow-x:auto;margin:20px 0;border:1px solid var(--line);border-radius:8px}
+table{width:100%;border-collapse:collapse;font-size:13.5px;min-width:560px}
+th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--ink3);
+  border-bottom:1.5px solid var(--line2);font-weight:650;background:var(--bg2);position:sticky;top:0}
+tbody tr:last-child td{border-bottom:0}
+td.n{white-space:nowrap;font-family:var(--mono);font-variant-numeric:tabular-nums}
+tr.hl td{background:#f0f8f4}
+
+/* status chips */
+.chip{display:inline-block;font:650 10.5px/1.5 var(--mono);letter-spacing:.04em;text-transform:uppercase;
+  border-radius:4px;padding:2px 7px;white-space:nowrap;border:1px solid}
+.c-ok{color:#155e40;background:#e4f3ea;border-color:#b9dfc9}
+.c-part{color:#8a5410;background:#fbf1de;border-color:#e8d3a8}
+.c-no{color:#8c352b;background:#fbe9e6;border-color:#ecc3bc}
+.c-lit{color:#28518a;background:#e8eff9;border-color:#c1d4ec}
+.c-plan{color:#5a4a86;background:#efecf8;border-color:#d1c9e8}
+
+/* figures */
+figure{margin:28px 0;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--bg)}
+figure img{display:block;width:100%;height:auto;background:var(--bg2)}
+figure svg{display:block;width:100%;height:auto;background:#fff}
+figcaption{font-size:13.5px;line-height:1.68;color:var(--ink2);padding:14px 17px;background:var(--bg2);border-top:1px solid var(--line)}
+figcaption b{color:var(--ink)}
+figcaption .no{display:block;margin-top:7px;color:var(--ink3)}
+.figrow{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin:28px 0}
+.figrow figure{margin:0}
+@media(max-width:760px){.figrow{grid-template-columns:1fr}}
+
+/* layer diagram */
+.layers{border:1px solid var(--line);border-radius:10px;overflow:hidden;margin:24px 0}
+.layer{display:grid;grid-template-columns:150px 1fr;gap:0;border-bottom:1px solid var(--line)}
+.layer:last-child{border-bottom:0}
+.layer .lb{background:var(--bg3);padding:14px 16px;font:650 12px/1.5 var(--mono);letter-spacing:.04em;
+  text-transform:uppercase;color:var(--green);border-right:1px solid var(--line)}
+.layer .ld{padding:14px 17px;font-size:14.5px}
+.layer .ld em{font-style:normal;color:var(--ink3);display:block;font-size:13px;margin-top:5px}
+@media(max-width:620px){.layer{grid-template-columns:1fr}.layer .lb{border-right:0;border-bottom:1px solid var(--line)}}
+
+/* scorecard */
+.score{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin:22px 0}
+.score .s{border:1px solid var(--line);border-radius:9px;padding:14px 16px;background:var(--bg2)}
+.score .s h4{margin:0 0 6px;font:650 12px/1.4 var(--mono);letter-spacing:.05em;text-transform:uppercase;color:var(--ink3)}
+.score .s .v{font-size:19px;font-weight:650;margin-bottom:6px}
+.score .s p{margin:0;font-size:13.5px;color:var(--ink2)}
+
+/* callout box */
+.verdict{border:2px solid var(--green);border-radius:10px;padding:20px 24px;margin:26px 0;background:#fff}
+.verdict h3{margin:0 0 8px;color:var(--green)}
+.verdict p{margin:8px 0;font-size:15.5px}
+
+footer{margin-top:76px;border-top:1px solid var(--line);background:var(--bg2);padding:30px 0 46px}
+footer p{font-size:13.5px;color:var(--ink2);margin:8px 0}
+.refs{font-size:13.5px;line-height:1.72}
+.refs li{margin:9px 0}
+.skip{position:absolute;left:-9999px}
+.skip:focus{left:8px;top:8px;background:#fff;padding:8px 12px;z-index:99;border:2px solid var(--green);border-radius:6px}
+</style>
+</head>
+<body>
+<a class="skip" href="#s1"><span class="en">Skip to content</span><span class="zh">跳到內容</span></a>
+
+<div class="langbar"><div class="wrap">
+  <b>ReLeaf · GEMS-Taiwan · iGEM 2026 · Software</b>
+  <div class="tog" role="group" aria-label="Language">
+    <button id="b-en" aria-pressed="true" onclick="setLang('en')">EN</button>
+    <button id="b-zh" aria-pressed="false" onclick="setLang('zh')">繁中</button>
+  </div>
+</div></div>
+
+<header class="hero"><div class="wrap">
+  <div class="eyebrow">Biomanufacturing Village · Standard page /software</div>
+  <h1><span class="en">The software that lets somebody who is not a scientist run a bioreactor</span><span class="zh">讓不是科學家的人也能操作生物反應器的軟體</span></h1>
+  <p class="sub">
+    <span class="en">ReLeaf BR-01 is a perfusion hollow-fibre bioreactor meant to sit where the crop is. This page documents the software that drives it: what it is, how it is built, what goes in and what comes out, which of its models are validated and which are borrowed, how far it actually is from being a digital twin, and the exact wet-lab experiments still needed before any of it can be called validated.</span>
+    <span class="zh">ReLeaf BR-01 是一台要放在作物旁邊的中空纖維灌流式生物反應器。這一頁記錄驅動它的軟體：它是什麼、怎麼搭起來的、輸入與輸出各是什麼、哪些模型已經驗證、哪些是借來的、它離「數位孿生」還有多遠，以及在任何東西能被稱為已驗證之前，濕實驗室還必須做出哪些實驗。</span>
+  </p>
+  <div class="meta">
+    <span>Single file · 3,139 lines</span>
+    <span>No build step</span>
+    <span>No CDN, no network call</span>
+    <span>EN / 繁體中文</span>
+    <span>ISA-101 High Performance HMI</span>
+    <span>MIT licence</span>
+  </div>
+  <div class="panel">
+    <p><b><span class="en">Read this first.</span><span class="zh">請先讀這一段。</span></b>
+    <span class="en">This page makes one claim that judges reward and one that they punish, so both are stated up front. The interface, its logging, its interlocks and its documentation are real and running. <b>The system is not a digital twin.</b> Data flows automatically from the reactor to the software; it does not flow automatically back. Section 5 scores that honestly against the nine-step list in Portela et al., and section 6 lists the sixteen measurements the wet lab still owes the models.</span>
+    <span class="zh">這一頁有一個評審會加分的主張，也有一個會扣分的事實，兩個都先講。介面、記錄、連鎖保護與文件都是真的、都在跑。<b>但這套系統不是數位孿生。</b>資料會自動從反應器流到軟體，卻不會自動流回去。第 5 節用 Portela 等人的九步清單誠實打分，第 6 節列出濕實驗室還欠模型的十六項量測。</span></p>
+  </div>
+</div></header>
+
+<div class="wrap">
+
+<nav class="toc" aria-label="Contents">
+  <ol>
+    <li><a href="#s1"><span class="en">What the software is</span><span class="zh">這套軟體是什麼</span></a></li>
+    <li><a href="#s2"><span class="en">Architecture</span><span class="zh">架構</span></a></li>
+    <li><a href="#s3"><span class="en">Inputs and outputs</span><span class="zh">輸入與輸出規格</span></a></li>
+    <li><a href="#s4"><span class="en">The models</span><span class="zh">模型清單</span></a></li>
+    <li><a href="#s5"><span class="en">The digital twin claim</span><span class="zh">數位孿生的主張</span></a></li>
+    <li><a href="#s6"><span class="en">Validation and the data still needed</span><span class="zh">驗證與還缺的數據</span></a></li>
+    <li><a href="#s7"><span class="en">Reusability</span><span class="zh">可重複使用性</span></a></li>
+    <li><a href="#s8"><span class="en">Documentation, licence, repository</span><span class="zh">文件、授權、原始碼</span></a></li>
+    <li><a href="#s9"><span class="en">Limitations and what we did not do</span><span class="zh">限制與我們沒做的事</span></a></li>
+    <li><a href="#s10"><span class="en">References</span><span class="zh">參考文獻</span></a></li>
+  </ol>
+</nav>
+
+<!-- ================= 1 ================= -->
+<h2 id="s1">1 · <span class="en">What the software is</span><span class="zh">這套軟體是什麼</span>
+  <span class="lead"><span class="en">The problem, the person holding the screen, and the one screen they see first.</span><span class="zh">問題、拿著螢幕的人，以及他們最先看到的那一屏。</span></span></h2>
+
+<h3><span class="en">The problem</span><span class="zh">問題</span></h3>
+<p><span class="en">Biomanufacturing is gated. To obtain a useful protein you buy it from somebody who owns a fermenter, a cold chain and a registration dossier. ReLeaf's answer is a reactor a grower can own and run beside the crop. That answer creates a software problem immediately, and it is not the usual one. Commercial bioprocess control software assumes a trained operator, a validated facility and a technician on call. A reactor standing in a shed on a smallholding has none of those. The interface has to be the technician.</span>
+<span class="zh">生物製造是被閘門擋住的。要拿到一個有用的蛋白質，你得向擁有發酵槽、冷鏈與登記文件的人購買。ReLeaf 的回答是一台農民可以自己擁有、放在作物旁邊運轉的反應器。這個回答馬上帶來一個軟體問題，而且不是常見的那一個。商用生物製程控制軟體預設有受訓過的操作員、通過驗證的廠房，以及隨叫隨到的技術人員。一台立在小農棚子裡的反應器一個都沒有。介面本身必須當那個技術人員。</span></p>
+
+<h3><span class="en">The user</span><span class="zh">使用者</span></h3>
+<p><span class="en">Two people, and the interface is written for the harder one. A student operator can be told what a trans-membrane pressure is. A micro-farmer in a 產銷班 cannot be assumed to have been told anything, and will be looking at the screen because something is already wrong. So every reading on the interface carries three things at once: the number, its analog context (the normal band, both alarm limits, the setpoint) and a plain-language line underneath saying what the reading means and why it is there. The plain-language layer can be switched off for expert use. The whole interface exists in English and Traditional Chinese, and the Chinese is a real translation written for a Chinese-reading grower rather than a gloss of the English.</span>
+<span class="zh">兩種人，而介面是為比較難的那一種寫的。學生操作員可以被教會什麼叫跨膜壓差。產銷班裡的小農不能假設他被教過任何東西，而且他會看螢幕，通常是因為已經出事了。所以介面上每一個讀值同時帶三樣東西：數字本身、它的類比脈絡（正常帶、兩個警報上下限、設定點），以及下面一行白話，說這個讀值是什麼意思、為什麼會在這裡。白話那一層可以關掉給熟手用。整個介面有英文與繁體中文兩版，中文是為讀中文的農民重寫的，不是把英文翻過去。</span></p>
+
+<h3><span class="en">What it does</span><span class="zh">它做什麼</span></h3>
+<ul>
+  <li><span class="en"><b>Shows the reactor.</b> Eight views: Overview, Flow path (a real P&amp;ID), Trends, Alarms, Data, Setup, Environment, Digital twin. Four display levels in the ISA-101 sense, from a single overview tile down to a per-device faceplate.</span><span class="zh"><b>顯示反應器。</b>八個畫面：總覽、流程圖（真正的 P&amp;ID）、趨勢、警報、資料、設定、環境、數位孿生。依 ISA-101 分成四個顯示層級，從一格總覽磚塊一路下到單一設備的面板。</span></li>
+  <li><span class="en"><b>Drives it.</b> Pump outputs, stirrer speed, valve positions and the green/red light panel, sent to the board as one serial line per state change. Five one-touch recipes, Idle, Grow, Induce, Perfuse and Clean, each of which sets every actuator correctly in one press.</span><span class="zh"><b>驅動它。</b>泵輸出、攪拌轉速、閥位與綠／紅光板，每次狀態改變送一行序列指令到控制板。五個一鍵模式：待機、生長、誘導、灌流、清洗，按一下就把每個致動器都設對。</span></li>
+  <li><span class="en"><b>Records it.</b> One row per 30 minutes of process time, exported as a three-sheet <code>.xlsx</code> (Readings, Run info, Alarm log) or a UTF-8 CSV with a byte-order mark so Excel opens Chinese headers correctly. The workbook writer is a small ZIP and OOXML encoder inside the page, so there is no library to install and no upload.</span><span class="zh"><b>記錄它。</b>每 30 分鐘製程時間寫一列，可輸出成三張表的 <code>.xlsx</code>（讀值、批次資訊、警報記錄）或帶 BOM 的 UTF-8 CSV，讓 Excel 正確開啟中文欄位。試算表是頁面內一個小型 ZIP 加 OOXML 產生器寫出來的，不必安裝套件，也不會上傳。</span></li>
+  <li><span class="en"><b>Says when to distrust it.</b> Values the rig cannot actually measure are tagged on their face: loop flow is <code>CALC</code> because there is no flow meter, cell density is <code>LAB</code> because there is no inline probe on this rig. Instruments that are designed but not fitted are drawn in dashed orange and labelled Planned.</span><span class="zh"><b>說出什麼時候不該相信它。</b>設備量不到的值直接在畫面上標出來：迴路流量標 <code>CALC</code>，因為沒有流量計；菌體密度標 <code>LAB</code>，因為這台設備上沒有管線內探頭。設計了但還沒裝的儀器用橘色虛線畫，標示為「規劃中」。</span></li>
+</ul>
+
+<figure>
+  <img src="assets/photometer-live-20260719.jpg" alt="A laptop on a lab bench showing the OD600 Live Monitor web interface, next to a breadboard, an Arduino, a peristaltic pump and two media bottles.">
+  <figcaption><b><span class="en">19 July 2026. The software running on the hardware, for the first time.</span><span class="zh">2026 年 7 月 19 日，軟體第一次跑在自己的硬體上。</span></b>
+  <span class="en">The in-line photometer the team built is feeding a browser page. The tiles on the screen are the live instance: 158 data points over 2 h 5 m, OD600 0.7554, sample-to-reference ratio 7.88 times, and a 28.6 % bubble and outlier rejection rate. The pump on the left reads 38.8.</span>
+  <span class="zh">團隊自製的管線內光度計正把資料餵進一個瀏覽器頁面。畫面上的磚塊是當下的實際執行：2 小時 5 分內 158 個資料點、OD600 0.7554、樣品對參考比 7.88 倍、氣泡與離群值剔除率 28.6 %。左邊的泵顯示 38.8。</span>
+  <span class="no"><span class="en">What it does not show: a calibrated reading. This is before the 23 August calibration, and it is a different, earlier program from the BR-01 operator interface described on this page.</span><span class="zh">它沒有顯示的：這不是經過校正的讀值。這是 8 月 23 日校正之前，而且這是一支比較早的程式，不是本頁描述的 BR-01 操作介面。</span></span></figcaption>
+</figure>
+
+<div class="note info"><p><b><span class="en">Where this page sits in the judging.</span><span class="zh">這一頁在評審裡的位置。</span></b>
+<span class="en">ReLeaf's three Special Award selections are Measurement, Hardware and Integrated Human Practices. Software is not one of them, and we are not claiming it as one. This page exists because the software carries a large part of the Measurement and Hardware cases, and because Project ballot question 4 asks how well engineering principles were used. It is written to the Best Software rubric anyway, because that rubric is the right checklist for judging whether a tool is documented, reusable and validated, whether or not the award is being contested.</span>
+<span class="zh">ReLeaf 選的三個特別獎是 Measurement、Hardware 與 Integrated Human Practices。Software 不在其中，我們也沒有宣稱它是。這一頁存在，是因為軟體撐起 Measurement 與 Hardware 論證的一大半，也因為 Project 評分表第 4 題問的是工程原則用得好不好。即使不角逐該獎，本頁仍照 Best Software 的評分面向來寫，因為那份清單本來就是判斷一個工具有沒有文件、能不能被重用、有沒有被驗證的正確清單。</span></p></div>
+
+<!-- ================= 2 ================= -->
+<h2 id="s2">2 · <span class="en">Architecture</span><span class="zh">架構</span>
+  <span class="lead"><span class="en">Four layers, one hard split of responsibility, and one decision that will look wrong until you read why.</span><span class="zh">四層、一條責任分界線，以及一個在你讀到理由之前會看起來很怪的決定。</span></span></h2>
+
+<div class="layers">
+  <div class="layer"><div class="lb">Field</div><div class="ld">
+    <span class="en">Four pressure transducers PT-01, PT-03, PT-04, PT-05 on 0 to 30 psi analog inputs. Three manual three-way valves in series on the lumen loop. Two peristaltic pumps. A hollow-fibre module, PES, 0.2 µm, 0.02 m², 11 fibres, 1.0 mm bore, 0.60 m effective length.</span>
+    <span class="zh">四顆壓力感測器 PT-01、PT-03、PT-04、PT-05，接在 0 到 30 psi 的類比輸入。管腔迴路上串聯三顆手動三通閥。兩顆蠕動泵。一支中空纖維模組：PES、0.2 µm、0.02 m²、11 根纖維、內徑 1.0 mm、有效長度 0.60 m。</span>
+    <em><span class="en">Planned and drawn dashed orange, not built: pH probe AT-02, temperature probe TT-01, base dosing P-03 with TK-04, green and red light panel L-01, stirrer M-01.</span><span class="zh">規劃中、以橘色虛線畫出、尚未製作：pH 探針 AT-02、溫度探針 TT-01、鹼液加藥 P-03 與 TK-04、綠紅光板 L-01、攪拌器 M-01。</span></em>
+  </div></div>
+  <div class="layer"><div class="lb">MCU</div><div class="ld">
+    <span class="en">Arduino Uno Q, STM32U585 side. Owns the pumps, the valves, a 1 Hz sensor scan and <b>all three interlocks</b>. 146 lines of C, <code>firmware/releaf_br01.ino</code>.</span>
+    <span class="zh">Arduino Uno Q 的 STM32U585 那一側。掌管泵、閥、1 Hz 感測掃描與<b>全部三條連鎖保護</b>。146 行 C，<code>firmware/releaf_br01.ino</code>。</span>
+    <em><span class="en">Serial, 115200 baud, newline terminated. In: <code>SET P01=12.0 P02=0.0 P03=0.0 STIR=300 LIGHT=GREEN V=111</code>. Out: <code>PV PH=7.02 T=37.0 PT1=2.69 PT3=1.31 PT4=0.42 PT5=0.93</code>.</span><span class="zh">序列埠，115200 baud，換行結尾。入：<code>SET P01=12.0 …</code>；出：<code>PV PH=7.02 T=37.0 PT1=…</code>。</span></em>
+  </div></div>
+  <div class="layer"><div class="lb">Linux</div><div class="ld">
+    <span class="en">Arduino Uno Q, Dragonwing side. Serves the page over HTTP, keeps the data log, holds the Wi-Fi. <code>python3 -m http.server 8080</code> is the whole server.</span>
+    <span class="zh">Arduino Uno Q 的 Dragonwing 那一側。用 HTTP 供應頁面、保存資料記錄、負責 Wi-Fi。整個伺服器就是 <code>python3 -m http.server 8080</code>。</span>
+    <em><span class="en">Serving over HTTP rather than <code>file://</code> is what enables Web Serial, so the Connect board button only works this way.</span><span class="zh">用 HTTP 而不是 <code>file://</code> 供應，是 Web Serial 能運作的前提，所以「連接控制板」按鈕只有這樣才會動。</span></em>
+  </div></div>
+  <div class="layer"><div class="lb">Browser</div><div class="ld">
+    <span class="en">The whole application, one HTML file. Vanilla JavaScript, no framework, no bundler, no dependency. Two builds from one source: a fluid desktop build for laptops and judging, and a fixed 1024×600 kiosk build that scales itself to whatever the 7-inch panel negotiates over HDMI.</span>
+    <span class="zh">整個應用程式就是一個 HTML 檔。原生 JavaScript，沒有框架、沒有打包器、沒有相依套件。同一份原始碼出兩個版本：給筆電與評審用的流動式桌面版，以及固定 1024×600、會自己縮放去填滿 7 吋面板透過 HDMI 協商出的任何解析度的 kiosk 版。</span>
+    <em><span class="en">Generated by <code>python3 build_kiosk.py</code>. Never edit the kiosk file by hand.</span><span class="zh">由 <code>python3 build_kiosk.py</code> 產生。不要手動編輯 kiosk 檔。</span></em>
+  </div></div>
+  <div class="layer"><div class="lb"><span class="en">Off-board</span><span class="zh">離線端</span></div><div class="ld">
+    <span class="en">A separate Python stack, <code>Math Model/releaf-model/</code>, that does the fitting, the identifiability analysis, the transport calculations and the anomaly detection, and emits tagged JSON. It runs on a laptop, not on the board. Everything it produces reaches the interface as a constant, not as a live call.</span>
+    <span class="zh">另一套獨立的 Python 程式 <code>Math Model/releaf-model/</code>，負責擬合、可辨識性分析、傳輸計算與異常偵測，輸出帶標籤的 JSON。它跑在筆電上，不在控制板上。它產生的所有東西都是以常數的形式進入介面，不是即時呼叫。</span>
+  </div></div>
+</div>
+
+<h3><span class="en">The split that matters</span><span class="zh">真正重要的那條界線</span></h3>
+<p><span class="en">The interlocks live on the MCU, not in the browser. There are three of them and they override the commanded value on every loop rather than advising it: the three lumen valves are in series so any one shut forces the loop pump to zero; a trans-membrane pressure above 0.50 bar forces it to zero; and no <code>SET</code> line for 5 seconds forces it to zero. A browser crash, a closed tab or a dropped Wi-Fi link therefore cannot move a pump or leave one running. The page always sends interlock-effective values, so a pump held off by an interlock is transmitted as <code>0.0</code> and never as its raw slider position. <b>The page is a window onto the controller, not the controller.</b></span>
+<span class="zh">連鎖保護寫在 MCU 上，不在瀏覽器裡。一共三條，而且每個迴圈都直接覆寫指令值，不是提醒：三顆管腔閥是串聯的，任何一顆關上就把迴路泵強制歸零；跨膜壓差超過 0.50 bar 強制歸零；連續 5 秒沒收到 <code>SET</code> 也強制歸零。所以瀏覽器當掉、分頁關掉、Wi-Fi 斷線，都不可能讓泵動起來或讓它繼續跑。頁面送出的一律是連鎖生效後的值，被連鎖擋下的泵送出去的是 <code>0.0</code>，不是滑桿上的原始值。<b>頁面是看向控制器的一扇窗，它本身不是控制器。</b></span></p>
+
+<div class="note warn"><p><b><span class="en">One interlock was deliberately removed.</span><span class="zh">有一條連鎖是被刻意拿掉的。</span></b>
+<span class="en">The dry-running interlock went when the tank level sensor LT-01 was removed from the design. A rule that cannot see its own input is worse than no rule, because people keep trusting it. That deletion is recorded in the equipment register rather than left silent.</span>
+<span class="zh">液位感測器 LT-01 從設計裡拿掉時，防乾轉連鎖也一起拿掉了。一條看不到自己輸入的規則，比沒有規則更糟，因為人還是會繼續相信它。這個刪除記在設備清冊裡，沒有默默帶過。</span></p></div>
+
+<h3><span class="en">Why one file, and why no build step</span><span class="zh">為什麼是一個檔，為什麼沒有建置步驟</span></h3>
+<p><span class="en">This looks like a shortcut and is not. Four constraints forced it, and all four come from where the thing has to run.</span>
+<span class="zh">這看起來像偷懶，但不是。四個限制逼出這個決定，四個都來自它必須運轉的地方。</span></p>
+<ol>
+  <li><span class="en"><b>The device may have no network.</b> A reactor in a shed has an operator, a screen and a board. Anything fetched from a CDN is a failure mode with no recovery path in the field. There are zero external requests in the file: no font host, no chart library, no telemetry. The team logo is inlined as a base64 data URI.</span><span class="zh"><b>裝置可能沒有網路。</b>棚子裡的反應器只有一個操作員、一個螢幕、一塊板子。任何從 CDN 抓的東西，在田間都是一個沒有復原路徑的故障模式。這個檔案裡對外請求是零：沒有字型主機、沒有圖表函式庫、沒有遙測。隊徽以 base64 data URI 內嵌。</span></li>
+  <li><span class="en"><b>The person who has to fix it is a high-school student in two years' time.</b> A build step is a second thing that can break, and it breaks silently and off-device. Opening one file in an editor and reloading the browser is a repair loop that survives the team that wrote it.</span><span class="zh"><b>兩年後要修它的人是一個高中生。</b>建置步驟是第二個會壞掉的東西，而且它壞得很安靜、又壞在裝置之外。用編輯器開一個檔、重新整理瀏覽器，這個修復迴圈能活得比寫它的隊伍久。</span></li>
+  <li><span class="en"><b>Reproducibility.</b> The iGEM Software rubric asks for reproducible build and run instructions and pinned dependencies. A file with no dependencies is trivially reproducible: there is nothing to pin and nothing to resolve. This is the one place where the constraint and the rubric agree completely.</span><span class="zh"><b>可重現性。</b>iGEM 軟體評分要求可重現的建置與執行說明，以及鎖定的相依版本。一個沒有相依套件的檔案是最容易重現的：沒有東西要鎖，也沒有東西要解析。這是限制與評分表完全一致的一點。</span></li>
+  <li><span class="en"><b>The wiki freeze.</b> iGEM wikis block external font and script hosts. Anything that needs a CDN would have to be rewritten before upload anyway.</span><span class="zh"><b>Wiki 凍結。</b>iGEM wiki 會擋外部字型與腳本主機。任何需要 CDN 的東西，上傳前反正都得重寫。</span></li>
+</ol>
+<p><span class="en">The cost is real and should be said. 3,139 lines in one file is past the point where a newcomer can hold it in their head, there are no unit tests, and the numbered section banners inside the file are doing the job that a module boundary would do in a larger project. We took that trade because the failure modes it removes happen in a field and the failure modes it creates happen at a desk.</span>
+<span class="zh">代價是真的，也應該講出來。一個檔 3,139 行，已經超過一個新來的人能整個裝進腦袋的程度；沒有單元測試；檔案裡那些編號的區段標題，在比較大的專案裡本來應該由模組邊界來做。我們接受這個取捨，是因為它消除的故障發生在田裡，而它造成的麻煩發生在書桌前。</span></p>
+
+<figure>
+  <img src="assets/first-live-pressure-20260712.jpg" alt="A lab bench with a peristaltic pump, a breadboard, a pressure transducer inline on clear tubing, and a laptop showing two oscillating pressure traces.">
+  <figcaption><b><span class="en">12 July 2026. The first time pressure transducers on the loop streamed to a computer in real time.</span><span class="zh">2026 年 7 月 12 日，迴路上的壓力感測器第一次即時串流到電腦。</span></b>
+  <span class="en">The peristaltic pump is at 050. The regular oscillation on both traces is the pump's own pulsation, which is the reason the interface reports a median over a window rather than an instantaneous reading.</span>
+  <span class="zh">蠕動泵設在 050。兩條曲線上規律的震盪是泵本身的脈動，這也是介面回報的是一個時間窗內的中位數、而不是瞬時值的原因。</span>
+  <span class="no"><span class="en">What it does not show: the BR-01 operator interface. This is an earlier logging dashboard, and it shows the pressure channel only, with no biology and no cell density.</span><span class="zh">它沒有顯示的：BR-01 操作介面。這是比較早的記錄用儀表板，而且只有壓力通道，沒有生物訊號、沒有菌體密度。</span></span></figcaption>
+</figure>
+
+<!-- ================= 3 ================= -->
+<h2 id="s3">3 · <span class="en">Inputs and outputs</span><span class="zh">輸入與輸出規格</span>
+  <span class="lead"><span class="en">Every variable the software consumes or emits, with its unit, its range, where it comes from, and whether that source exists yet.</span><span class="zh">軟體吃進去或吐出來的每一個變數，包含單位、範圍、來源，以及那個來源目前存不存在。</span></span></h2>
+
+<p><span class="en">The light-induction half of this specification is anchored on Castillo-Hair et al. 2019, which characterised the CcaS/CcaR green-light system in <i>Bacillus subtilis</i> using the Light Plate Apparatus of Gerhardt et al. 2016. That paper is the reason the specification can be written at all: it gives a steady-state transfer function with fitted parameters and a kinetic model with measured time constants, so light intensity in and promoter output out is a defined mapping rather than a hand wave. It is also literature, not our data, and every row taken from it is marked <span class="chip c-lit">lit</span>.</span>
+<span class="zh">本規格中「光誘導」那一半，錨定在 Castillo-Hair 等人 2019 年的論文上。該研究用 Gerhardt 等人 2016 年的 Light Plate Apparatus，把 CcaS/CcaR 綠光系統在<i>枯草桿菌</i>中特性化。這份規格能寫得出來就是因為它：它給了一個帶擬合參數的穩態轉移函數，以及一個帶實測時間常數的動力學模型，所以「光強度進、啟動子輸出出」是一個有定義的對應，不是空口說白話。但它是文獻，不是我們的數據，凡取自它的列都標成 <span class="chip c-lit">lit</span>。</span></p>
+
+<div class="note"><p><b><span class="en">The transfer function, verbatim.</span><span class="zh">轉移函數原文。</span></b>
+<span class="en">Steady state is a Hill function, <code>y = y₀ + Δy · xⁿ / (xⁿ + K½ⁿ)</code>, where <code>y</code> is sfGFP fluorescence in MEFL and <code>x</code> is light intensity in µmol·m⁻²·s⁻¹. The response to a step change in intensity is a third-order delayed differential system, production rate to immature reporter to mature reporter. Both are given in Castillo-Hair's own appendix, which is the copy held in this project at <code>Opto_Math/2019_Castillo_Math.pdf</code>.</span>
+<span class="zh">穩態是一個 Hill 函數：<code>y = y₀ + Δy · xⁿ / (xⁿ + K½ⁿ)</code>，其中 <code>y</code> 是以 MEFL 表示的 sfGFP 螢光，<code>x</code> 是以 µmol·m⁻²·s⁻¹ 表示的光強度。對強度階躍變化的響應是一組三階延遲微分方程：生產速率、未成熟報導蛋白、成熟報導蛋白。兩者都寫在 Castillo-Hair 自己的附錄裡，本專案存有該份副本 <code>Opto_Math/2019_Castillo_Math.pdf</code>。</span></p></div>
+
+<h3>3.1 <span class="en">Light-induction inputs</span><span class="zh">光誘導輸入</span></h3>
+<div class="tw"><table>
+<thead><tr>
+  <th><span class="en">Variable</span><span class="zh">變數</span></th><th><span class="en">Symbol</span><span class="zh">符號</span></th><th><span class="en">Unit</span><span class="zh">單位</span></th>
+  <th><span class="en">Range</span><span class="zh">範圍</span></th><th><span class="en">Source</span><span class="zh">來源</span></th><th><span class="en">Status</span><span class="zh">狀態</span></th></tr></thead>
+<tbody>
+<tr><td><span class="en">Green photon flux at the culture</span><span class="zh">培養液處的綠光光子通量</span></td><td class="n">I_G</td><td class="n">µmol·m⁻²·s⁻¹</td><td class="n">0.1 – 50</td>
+  <td><span class="en">Light panel L-01 duty cycle, or the LPA</span><span class="zh">光板 L-01 的工作週期，或 LPA</span></td>
+  <td><span class="chip c-no">not built</span><br><span class="en">L-01 does not exist. There is no calibrated flux anywhere in the project.</span><span class="zh">L-01 還不存在。專案裡沒有任何一個經過校正的光通量值。</span></td></tr>
+<tr><td><span class="en">Green wavelength</span><span class="zh">綠光波長</span></td><td class="n">λ_G</td><td class="n">nm</td><td class="n">520</td>
+  <td><span class="en">LED specification</span><span class="zh">LED 規格</span></td>
+  <td><span class="chip c-part">offset unreconciled</span><br><span class="en">Our LEDs are 520 nm. The CcaS absorption maximum is 535 nm and the source paper's K½ is quoted at 526 nm. The correction has not been made.</span><span class="zh">我們的 LED 是 520 nm。CcaS 吸收峰在 535 nm，來源論文的 K½ 標在 526 nm。這個差異還沒有修正。</span></td></tr>
+<tr><td><span class="en">Red photon flux (reset)</span><span class="zh">紅光光子通量（關閉）</span></td><td class="n">I_R</td><td class="n">µmol·m⁻²·s⁻¹</td><td class="n">20</td>
+  <td><span class="en">Light panel L-01</span><span class="zh">光板 L-01</span></td><td><span class="chip c-no">not built</span></td></tr>
+<tr><td><span class="en">Red wavelength</span><span class="zh">紅光波長</span></td><td class="n">λ_R</td><td class="n">nm</td><td class="n">660</td>
+  <td><span class="en">LED specification</span><span class="zh">LED 規格</span></td>
+  <td><span class="chip c-part">offset unreconciled</span><br><span class="en">Source paper uses 672 nm.</span><span class="zh">來源論文用的是 672 nm。</span></td></tr>
+<tr><td><span class="en">Duty cycle of the light program</span><span class="zh">光程式的工作週期</span></td><td class="n">D</td><td class="n">%</td><td class="n">0 – 100</td>
+  <td><span class="en">Recipe or schedule chosen in the UI</span><span class="zh">介面上選定的模式或排程</span></td>
+  <td><span class="chip c-no">uncharacterised</span><br><span class="en">Pulsatile versus static induction is known from the literature to change output. We have measured nothing.</span><span class="zh">文獻已知脈衝式與恆定式誘導會影響輸出。我們什麼都還沒量。</span></td></tr>
+<tr><td><span class="en">Induction onset</span><span class="zh">誘導起始時間</span></td><td class="n">t_on</td><td class="n">h <span class="en">of batch</span><span class="zh">（批次時間）</span></td><td class="n">—</td>
+  <td><span class="en">Operator, recipe, or the Twin view's policy</span><span class="zh">操作員、模式，或孿生畫面的策略</span></td><td><span class="chip c-part">policy exists, unvalidated</span></td></tr>
+<tr class="hl"><td><span class="en">Hill coefficient</span><span class="zh">Hill 係數</span></td><td class="n">n</td><td class="n">—</td><td class="n">1.88 ± 0.16</td>
+  <td>Castillo-Hair 2019</td><td><span class="chip c-lit">lit</span> <span class="en">borrowed, not ours</span><span class="zh">借來的，不是我們的</span></td></tr>
+<tr class="hl"><td><span class="en">Half-maximal intensity</span><span class="zh">半數最大強度</span></td><td class="n">K½</td><td class="n">µmol·m⁻²·s⁻¹</td><td class="n">4.66 ± 0.63</td>
+  <td><span class="en">Castillo-Hair 2019, at 526 nm</span><span class="zh">Castillo-Hair 2019，526 nm</span></td><td><span class="chip c-lit">lit</span></td></tr>
+<tr class="hl"><td><span class="en">Time to half-on</span><span class="zh">半開時間</span></td><td class="n">t½_on</td><td class="n">min</td><td class="n">105.1 ± 1.5</td><td>Castillo-Hair 2019</td><td><span class="chip c-lit">lit</span></td></tr>
+<tr class="hl"><td><span class="en">Time to half-off</span><span class="zh">半關時間</span></td><td class="n">t½_off</td><td class="n">min</td><td class="n">74.97 ± 0.39</td><td>Castillo-Hair 2019</td><td><span class="chip c-lit">lit</span></td></tr>
+<tr class="hl"><td><span class="en">Basal output</span><span class="zh">基礎輸出</span></td><td class="n">y₀</td><td class="n">MEFL</td><td class="n">1997.6</td><td>Castillo-Hair 2019</td><td><span class="chip c-lit">lit</span></td></tr>
+<tr class="hl"><td><span class="en">Output span</span><span class="zh">輸出動態範圍</span></td><td class="n">Δy</td><td class="n">MEFL</td><td class="n">106740.5</td><td>Castillo-Hair 2019</td><td><span class="chip c-lit">lit</span></td></tr>
+</tbody></table></div>
+
+<div class="note bad"><p><b><span class="en">A discrepancy in our own records, unresolved.</span><span class="zh">我們自己記錄裡的一個矛盾，尚未解決。</span></b>
+<span class="en">The team's 2026-07-04 spec freeze logs <code>n = 1.88 ± 0.16</code> and <code>K½ = 4.66 ± 0.63</code> as "Castillo-Hair 2019, <i>E. coli</i>, 526 nm", but the 2019 paper we cite is titled <i>Optogenetic control of Bacillus subtilis gene expression</i>. Either the host attribution in our notes is wrong or the parameters were taken from a different figure than we think. This must be checked against the paper before the wiki freeze. We have written it here rather than quietly picking whichever reading suits us.</span>
+<span class="zh">團隊 2026-07-04 的規格凍結把 <code>n = 1.88 ± 0.16</code> 與 <code>K½ = 4.66 ± 0.63</code> 記成「Castillo-Hair 2019、<i>大腸桿菌</i>、526 nm」，但我們引用的 2019 年論文標題是《枯草桿菌基因表現的光遺傳學控制》。要不是我們筆記裡的宿主寫錯了，就是參數取自跟我們以為的不同的圖。wiki 凍結前必須對照論文確認。我們把它寫在這裡，而不是安靜地挑一個對自己有利的說法。</span></p></div>
+
+<h3>3.2 <span class="en">Reactor sensor inputs</span><span class="zh">反應器感測輸入</span></h3>
+<div class="tw"><table>
+<thead><tr><th>Tag</th><th><span class="en">Variable</span><span class="zh">變數</span></th><th><span class="en">Unit</span><span class="zh">單位</span></th><th><span class="en">Path into the software</span><span class="zh">進入軟體的路徑</span></th><th><span class="en">Status</span><span class="zh">狀態</span></th></tr></thead>
+<tbody>
+<tr><td class="n">PT-01</td><td><span class="en">Lumen inlet pressure</span><span class="zh">管腔入口壓力</span></td><td class="n">psi (0–30)</td><td class="n">MCU A1 → <code>PV</code> line, 1 Hz</td><td><span class="chip c-ok">built</span></td></tr>
+<tr><td class="n">PT-03</td><td><span class="en">Lumen outlet pressure, under the module</span><span class="zh">模組下方的管腔出口壓力</span></td><td class="n">psi (0–30)</td><td class="n">MCU A2 → <code>PV</code></td><td><span class="chip c-ok">built</span></td></tr>
+<tr><td class="n">PT-04</td><td><span class="en">Shell top pressure</span><span class="zh">殼側頂部壓力</span></td><td class="n">psi (0–30)</td><td class="n">MCU A3 → <code>PV</code></td><td><span class="chip c-part">built, uncharacterised</span><br><span class="en">Currently derived from the lumen pump curve. The shell side has never been characterised on the rig.</span><span class="zh">目前是從管腔側的泵曲線推出來的。殼側從來沒有在這台設備上做過特性化。</span></td></tr>
+<tr><td class="n">PT-05</td><td><span class="en">Shell bottom pressure</span><span class="zh">殼側底部壓力</span></td><td class="n">psi (0–30)</td><td class="n">MCU A4 → <code>PV</code></td><td><span class="chip c-part">built, uncharacterised</span></td></tr>
+<tr><td class="n">AT-02</td><td>pH</td><td class="n">pH</td><td class="n">I²C front end → <code>PV PH=</code></td><td><span class="chip c-no">planned</span><br><span class="en">The firmware currently declares <code>float ph = 7</code> as a constant. It is not a measurement and the interface labels it Planned.</span><span class="zh">韌體現在寫死 <code>float ph = 7</code>。那不是量測值，介面上標示為「規劃中」。</span></td></tr>
+<tr><td class="n">TT-01</td><td><span class="en">Temperature</span><span class="zh">溫度</span></td><td class="n">°C</td><td class="n">DS18B20 1-Wire, pin 2</td><td><span class="chip c-no">planned</span><br><span class="en">Firmware constant <code>float tempC = 25</code>.</span><span class="zh">韌體常數 <code>float tempC = 25</code>。</span></td></tr>
+<tr><td class="n">—</td><td><span class="en">Optical density at 600 nm</span><span class="zh">600 nm 光密度</span></td><td class="n">AU</td><td><span class="en">Sample taken off the rig, typed in. Tagged <code>LAB</code> on every screen it appears on.</span><span class="zh">從設備上取樣、人工輸入。凡出現的畫面都標 <code>LAB</code>。</span></td><td><span class="chip c-part">manual</span><br><span class="en">The team's own in-line photometer exists and produced the 434-hour run, but it is a separate instrument and is not wired into this interface.</span><span class="zh">團隊自製的管線內光度計是存在的，也產出了 434 小時的長跑，但它是獨立儀器，沒有接進這個介面。</span></td></tr>
+<tr><td class="n">—</td><td><span class="en">Photometer reference channel</span><span class="zh">光度計參考通道</span></td><td class="n">lux</td><td><span class="en">Photometer log, offline</span><span class="zh">光度計記錄，離線</span></td><td><span class="chip c-part">offline</span><br><span class="en">This is the channel that caught the instrument degrading. See section 6.</span><span class="zh">就是這個通道抓到儀器在劣化。見第 6 節。</span></td></tr>
+<tr><td class="n">—</td><td><span class="en">Field weather</span><span class="zh">田間氣象</span></td><td class="n"><span class="en">various</span><span class="zh">多項</span></td><td><span class="en">A manual snapshot pasted into the source, flagged <code>live: false</code> in the code.</span><span class="zh">貼在原始碼裡的人工快照，程式中標記 <code>live: false</code>。</span></td><td><span class="chip c-no">not live</span><br><span class="en">There is no weather API call. The Environment view is honest about this on its face.</span><span class="zh">沒有任何氣象 API 呼叫。環境畫面上直接寫明這件事。</span></td></tr>
+<tr><td class="n">—</td><td><span class="en">Operator commands</span><span class="zh">操作員指令</span></td><td class="n">%, rpm, <span class="en">open/shut</span><span class="zh">開／關</span></td><td><span class="en">Sliders, valve toggles, recipe buttons, light state, plain-words toggle, language</span><span class="zh">滑桿、閥開關、模式按鈕、燈光狀態、白話開關、語言</span></td><td><span class="chip c-ok">built</span></td></tr>
+</tbody></table></div>
+
+<h3>3.3 <span class="en">Outputs</span><span class="zh">輸出</span></h3>
+<div class="tw"><table>
+<thead><tr><th><span class="en">Output</span><span class="zh">輸出</span></th><th><span class="en">Unit</span><span class="zh">單位</span></th><th><span class="en">Produced by</span><span class="zh">產生方式</span></th><th><span class="en">Consumer</span><span class="zh">使用者</span></th></tr></thead>
+<tbody>
+<tr><td><span class="en">Actuator command line</span><span class="zh">致動器指令行</span></td><td class="n">—</td><td><span class="en">One <code>SET</code> line per state change, interlock-effective values only</span><span class="zh">每次狀態改變送一行 <code>SET</code>，且一律是連鎖生效後的值</span></td><td class="n">MCU</td></tr>
+<tr><td><span class="en">Pump outputs P-01, P-02, P-03</span><span class="zh">泵輸出 P-01、P-02、P-03</span></td><td class="n">% <span class="en">of full scale</span><span class="zh">滿刻度百分比</span></td><td><span class="en">PWM, clamped to the 24 % top of the measured calibration range</span><span class="zh">PWM，上限箝制在實測校正範圍的頂點 24 %</span></td><td><span class="en">Pumps</span><span class="zh">泵</span></td></tr>
+<tr><td><span class="en">Light state</span><span class="zh">燈光狀態</span></td><td class="n">OFF | GREEN | RED</td><td><span class="en">Two digital pins. <b>Green switches the CcaS/CcaR system on in <i>B. subtilis</i>; red switches it off.</b></span><span class="zh">兩支數位腳位。<b>綠光把<i>枯草桿菌</i>的 CcaS/CcaR 系統打開，紅光關掉它。</b></span></td><td><span class="en">L-01 (planned)</span><span class="zh">L-01（規劃中）</span></td></tr>
+<tr><td><span class="en">Loop flow</span><span class="zh">迴路流量</span></td><td class="n">mL/min</td><td><span class="en">Read off the measured pump curve. Tagged <code>CALC</code>, never <code>FT-01</code>, because there is no flow meter.</span><span class="zh">從實測泵曲線讀出。標 <code>CALC</code>，絕不標 <code>FT-01</code>，因為沒有流量計。</span></td><td><span class="en">Display, fouling model</span><span class="zh">顯示、結垢模型</span></td></tr>
+<tr><td><span class="en">Trans-membrane pressure</span><span class="zh">跨膜壓差</span></td><td class="n">bar</td><td><span class="en">Mean lumen pressure minus mean shell pressure, computed on the MCU</span><span class="zh">管腔平均壓減殼側平均壓，在 MCU 上計算</span></td><td><span class="en">Display, interlock at 0.50 bar</span><span class="zh">顯示、0.50 bar 連鎖</span></td></tr>
+<tr><td><span class="en">Fouling resistance ratio</span><span class="zh">結垢阻力比</span></td><td class="n">× <span class="en">baseline</span><span class="zh">基準倍數</span></td><td><span class="en">ΔP_net divided by flow, relative to the clean baseline at 263 mL/min. Clean the module before 2.00×.</span><span class="zh">淨壓差除以流量，對照 263 mL/min 的乾淨基準。到 2.00 倍之前要清洗模組。</span></td><td><span class="en">Display, maintenance decision</span><span class="zh">顯示、維護判斷</span></td></tr>
+<tr><td><span class="en">Estimated peptide concentration</span><span class="zh">推估胜肽濃度</span></td><td class="n">nM</td><td><span class="en">The yield chain in section 4, model M8. Displayed with the words "a ceiling estimate, not a measured titre" beside it.</span><span class="zh">第 4 節模型 M8 的產率推算鏈。旁邊直接寫著「這是上限估計，不是實測效價」。</span></td><td><span class="en">Twin view</span><span class="zh">孿生畫面</span></td></tr>
+<tr><td><span class="en">Crop stress risk band</span><span class="zh">作物逆境風險等級</span></td><td class="n">low | med | high</td><td><span class="en">Maximum of four indices derived from the weather snapshot</span><span class="zh">由氣象快照導出的四項指標取最大值</span></td><td><span class="en">Overview, Environment</span><span class="zh">總覽、環境</span></td></tr>
+<tr><td><span class="en">Induction decision and autonomy tier</span><span class="zh">誘導決策與自主等級</span></td><td class="n">HOLD | WAIT | GREEN ON</td><td><span class="en">Demand signal, culture state and a trust score, combined by an explicit rule set</span><span class="zh">需求訊號、菌況與信任分數，由明確的規則組合</span></td><td><span class="en">Twin view. <b>It advises. It never actuates.</b></span><span class="zh">孿生畫面。<b>它只建議，從不致動。</b></span></td></tr>
+<tr><td><span class="en">Alarm list</span><span class="zh">警報清單</span></td><td class="n">P1 | P2</td><td><span class="en">Band and interlock evaluation. A reading is only wrong if the equipment behind it is supposed to be running.</span><span class="zh">依帶區與連鎖判定。只有當該讀值背後的設備本來就該在運轉時，讀值才算「不對」。</span></td><td><span class="en">Alarms view, banner</span><span class="zh">警報畫面、頂部橫幅</span></td></tr>
+<tr><td><span class="en">Batch record</span><span class="zh">批次記錄</span></td><td class="n">.xlsx / .csv</td><td><span class="en">One row per 30 min of process time. Three sheets: Readings with a unit on every column and numbers stored as numbers, Run info with the rig constants and the pump curve, and the Alarm log. CSV carries a UTF-8 byte-order mark.</span><span class="zh">每 30 分鐘製程時間一列。三張表：讀值（每欄都有單位，數字以數值型態儲存）、批次資訊（含設備常數與泵曲線）、警報記錄。CSV 帶 UTF-8 BOM。</span></td><td><span class="en">Excel, the model stack, the notebook</span><span class="zh">Excel、模型程式、實驗記錄</span></td></tr>
+</tbody></table></div>
+
+<!-- ================= 4 ================= -->
+<h2 id="s4">4 · <span class="en">The models</span><span class="zh">模型清單</span>
+  <span class="lead"><span class="en">Eleven models, each classified against the taxonomy in Zobel-Roos et al., with what it predicts, whether it is validated, the range it is valid over, and what would falsify it.</span><span class="zh">十一個模型，依 Zobel-Roos 等人的分類法歸類，並列出它預測什麼、驗證了沒有、有效範圍，以及什麼會推翻它。</span></span></h2>
+
+<p><span class="en">Zobel-Roos et al. sort process models by whether they extrapolate. Rigorous physico-chemical models, which separate fluid dynamics, phase equilibrium and mass transfer and parameterise each independently, are the only class they call predictive in scale, and only once validated. Short-cut models are "non-predictive in scale and dimensions". Statistical models and neural networks are "non-predictive outside trainings range". Hybrid models are demoted to "non-predictive due to the statistical part", on the argument that combining a mechanistic model with a fitted one reduces the predictability to the weakest part. That last position is contested, and Portela et al. in the same volume treat hybrid modelling more favourably, so it is presented here as one group's falsification-based ranking rather than a settled consensus.</span>
+<span class="zh">Zobel-Roos 等人依「會不會外推」把製程模型分類。嚴謹的物理化學模型把流體力學、相平衡與質傳分開、各自獨立參數化，是他們唯一稱為「在尺度上具預測性」的一類，而且必須先經過驗證。捷徑模型是「在尺度與尺寸上不具預測性」。統計模型與類神經網路是「在訓練範圍外不具預測性」。混合模型被降級為「因統計部分而不具預測性」，理由是把機制模型和擬合模型合起來，預測力會被最弱的那一半決定。最後這個立場是有爭議的，同一本書裡 Portela 等人對混合建模的態度友善得多，所以這裡把它當成某一研究群基於可否證性的排序，而不是已有共識的定論。</span></p>
+
+<p><span class="en">Applying that ruler to ReLeaf honestly: <b>most of what the software computes is short-cut or statistical, and therefore does not extrapolate.</b> The one genuinely mechanistic layer, the light-to-promoter transfer function, has not been fitted in our hands at all.</span>
+<span class="zh">誠實地把這把尺放到 ReLeaf 上：<b>軟體算的東西大部分是捷徑型或統計型，因此不會外推。</b>唯一真正屬於機制型的那一層——光到啟動子的轉移函數——我們自己根本還沒擬合過。</span></p>
+
+<div class="tw"><table>
+<thead><tr><th>#</th><th><span class="en">Model</span><span class="zh">模型</span></th><th><span class="en">Type</span><span class="zh">類型</span></th><th><span class="en">In → predicts</span><span class="zh">輸入 → 預測</span></th><th><span class="en">Validation</span><span class="zh">驗證</span></th><th><span class="en">Valid range</span><span class="zh">有效範圍</span></th><th><span class="en">Falsified by</span><span class="zh">如何被推翻</span></th></tr></thead>
+<tbody>
+<tr><td class="n">M1</td><td><span class="en">Pump curve</span><span class="zh">泵曲線</span></td><td><span class="en">Short-cut, measured lookup with interpolation</span><span class="zh">捷徑型，實測查表加內插</span></td><td class="n">P-01 % → mL/min</td>
+  <td><span class="chip c-ok">measured</span> <span class="en">9 points, n = 1 each, 22 °C, water</span><span class="zh">9 個點，每點 n = 1，22 °C，純水</span></td><td class="n">0 – 24 %<br>0 – 450 mL/min</td>
+  <td><span class="en">Fit a flow meter and compare. Running medium instead of water at a different viscosity.</span><span class="zh">裝流量計來比對。或改用黏度不同的培養基而非純水。</span></td></tr>
+<tr><td class="n">M2</td><td><span class="en">Membrane pressure drop</span><span class="zh">膜壓降</span></td><td><span class="en">Short-cut with a mechanistic form, ΔP = aQ + bQ²</span><span class="zh">帶機制形式的捷徑型，ΔP = aQ + bQ²</span></td><td class="n">Q → ΔP_net (bar)</td>
+  <td><span class="chip c-ok">validated</span> <span class="en">R² 0.9954, residual SD 0.0101 bar, background subtracted using a jumper configuration</span><span class="zh">R² 0.9954，殘差 SD 0.0101 bar，並用跳接管組態扣掉背景</span></td><td class="n">113 – 263 mL/min<br>22 °C, <span class="en">water, clean module</span><span class="zh">純水、乾淨模組</span></td>
+  <td><span class="en">Repeat with a fouled module, or with medium. Net ΔP is 0.90 to 0.96× Hagen-Poiseuille, so a large deviation would say a fibre is blocked.</span><span class="zh">用結垢的模組或培養基重做。淨壓差是 Hagen-Poiseuille 的 0.90 到 0.96 倍，偏離太多就代表有纖維堵住。</span></td></tr>
+<tr><td class="n">M3</td><td><span class="en">Trans-membrane pressure</span><span class="zh">跨膜壓差</span></td><td><span class="en">Direct balance arithmetic</span><span class="zh">直接的平衡式算術</span></td><td class="n">PT-01,03,04,05 → TMP</td>
+  <td><span class="chip c-part">arithmetic only</span> <span class="en">An audit of the live dashboard on 2026-09-02 found the displayed TMP not distinguishable from zero under either error model.</span><span class="zh">2026-09-02 對即時儀表板的稽核發現，在兩種誤差模型下，顯示的 TMP 都與零無法區分。</span></td>
+  <td class="n"><span class="en">needs zeroed sensors</span><span class="zh">感測器須先歸零</span></td>
+  <td><span class="en">Zero all four transducers against atmosphere and repeat. A ±0.055 bar interval on a 0.30 bar design point is not good enough to control on.</span><span class="zh">四顆感測器對大氣歸零後重做。在 0.30 bar 的設計點上帶 ±0.055 bar 的區間，還不足以拿來控制。</span></td></tr>
+<tr><td class="n">M4</td><td><span class="en">Fouling resistance</span><span class="zh">結垢阻力</span></td><td><span class="en">Short-cut, ratio to a clean baseline</span><span class="zh">捷徑型，對乾淨基準取比值</span></td><td class="n">ΔP_net / Q → × baseline</td>
+  <td><span class="chip c-no">not validated</span> <span class="en">The module has never been run to fouling. The 2.00× cleaning threshold is a design rule, not an observation.</span><span class="zh">模組從來沒有跑到結垢過。2.00 倍的清洗門檻是設計規則，不是觀察結果。</span></td>
+  <td class="n"><span class="en">normalise to 25 °C</span><span class="zh">須正規化到 25 °C</span></td>
+  <td><span class="en">Run a culture to fouling and record the trajectory. If resistance jumps rather than creeping, a ratio threshold is the wrong instrument.</span><span class="zh">把培養跑到結垢並記錄軌跡。若阻力是跳升而不是緩升，用比值門檻就是錯的工具。</span></td></tr>
+<tr><td class="n">M5</td><td><span class="en">Growth kinetics</span><span class="zh">生長動力學</span></td><td><span class="en">Unstructured kinetic, mechanistic form, fitted parameters</span><span class="zh">非結構動力學，機制形式，參數擬合</span></td><td class="n">t → OD600</td>
+  <td><span class="chip c-ok">fitted to our data</span> <span class="en">37 °C: µ 0.92 h⁻¹ log-linear over 0 to 3 h, 1.31 h⁻¹ logistic, X_max 1.54 OD. 22 °C: µ 0.0329 h⁻¹ over 7 to 40 h.</span><span class="zh">37 °C：0 到 3 h 對數線性 µ 0.92 h⁻¹，logistic 1.31 h⁻¹，X_max 1.54 OD。22 °C：7 到 40 h µ 0.0329 h⁻¹。</span></td>
+  <td class="n"><span class="en">the exact condition fitted</span><span class="zh">僅限所擬合的條件</span></td>
+  <td><span class="en">Whether 37 °C parameters transfer to 22 °C ambient operation is an open biological question, not an engineering one. A 22 °C batch run alongside a 37 °C one settles it.</span><span class="zh">37 °C 的參數能不能轉用到 22 °C 常溫運轉，是生物問題不是工程問題。跑一個 22 °C 與 37 °C 的平行批次就能解決。</span></td></tr>
+<tr class="hl"><td class="n">M6</td><td><span class="en">CcaSR steady-state transfer function</span><span class="zh">CcaSR 穩態轉移函數</span></td><td><span class="en">Rigorous form, literature parameters</span><span class="zh">機制形式，文獻參數</span></td><td class="n">I_G → MEFL</td>
+  <td><span class="chip c-lit">literature only</span> <span class="en">Not fitted in our hands. No induction curve exists in this project.</span><span class="zh">我們自己沒有擬合過。本專案不存在任何誘導曲線。</span></td>
+  <td class="n">0.1 – 50 µmol·m⁻²·s⁻¹<br>526 nm</td>
+  <td><span class="en">The LPA dose-response in section 6. If our n and K½ come back different, every downstream number moves with them.</span><span class="zh">第 6 節的 LPA 劑量反應實驗。若我們量到的 n 與 K½ 不同，下游每一個數字都會跟著動。</span></td></tr>
+<tr class="hl"><td class="n">M7</td><td><span class="en">CcaSR dynamics</span><span class="zh">CcaSR 動力學</span></td><td><span class="en">Rigorous, third-order delayed ODE system</span><span class="zh">機制型，三階延遲常微分方程組</span></td><td class="n"><span class="en">light step → output over time</span><span class="zh">光階躍 → 輸出隨時間</span></td>
+  <td><span class="chip c-lit">literature only</span></td><td class="n">t½_on 105.1 min<br>t½_off 74.97 min</td>
+  <td><span class="en">A step change from red to green, sampled every 15 min for 6 h, in our strain and vessel.</span><span class="zh">在我們的菌株與容器裡做紅轉綠的階躍，每 15 分鐘取樣一次，做 6 小時。</span></td></tr>
+<tr class="hl"><td class="n">M8</td><td><span class="en">Yield ceiling chain</span><span class="zh">產率上限推算鏈</span></td><td><span class="en">Short-cut stoichiometric bound</span><span class="zh">捷徑型的化學計量上限</span></td><td class="n">MEFL → molecules/cell → nM</td>
+  <td><span class="chip c-no">a bound, not a prediction</span> <span class="en">Four of the five chain steps are tagged verify.</span><span class="zh">五個步驟中有四個標為待驗證。</span></td>
+  <td class="n"><span class="en">upper bound only</span><span class="zh">僅為上限</span></td>
+  <td><span class="en">Any measured titre at all. See the box below.</span><span class="zh">任何一個實測效價都可以。見下方說明框。</span></td></tr>
+<tr><td class="n">M9</td><td><span class="en">Weather-derived stress indices</span><span class="zh">氣象導出的逆境指標</span></td><td><span class="en">Short-cut empirical correlations, Tetens for saturation vapour pressure and Hargreaves for reference ET</span><span class="zh">捷徑型經驗關聯式，飽和水氣壓用 Tetens，參考蒸發散用 Hargreaves</span></td><td class="n"><span class="en">weather → heat, VPD, dryness, salinity risk</span><span class="zh">氣象 → 熱、VPD、乾旱、鹽害風險</span></td>
+  <td><span class="chip c-no">not validated</span> <span class="en">Extra-terrestrial radiation is assumed at 35 MJ for 25° N and tagged as an assumption in the code. Never checked against a field season.</span><span class="zh">地外輻射假設為 25°N 的 35 MJ，程式中標示為假設。從未對照過一整個作季驗證。</span></td>
+  <td class="n"><span class="en">Taipei, broccoli thresholds</span><span class="zh">台北、青花菜門檻</span></td>
+  <td><span class="en">A season of soil sensor data against the index. Crop thresholds are cool-season-crop values, so a different crop invalidates them directly.</span><span class="zh">用一整季的土壤感測資料對照指標。作物門檻取的是冷季作物值，換作物就直接失效。</span></td></tr>
+<tr><td class="n">M10</td><td><span class="en">Measurement trust layer</span><span class="zh">量測信任層</span></td><td><span class="en">Artificial intelligence and statistical, PCA-MSPC plus an autoencoder</span><span class="zh">人工智慧與統計型，PCA-MSPC 加自編碼器</span></td><td class="n"><span class="en">OD and reference channel → sensor fault vs process event</span><span class="zh">OD 與參考通道 → 感測器故障或製程事件</span></td>
+  <td><span class="chip c-part">n = 2 events, one run</span> <span class="en">26.7 h of lead time on a real instrument failure. No error rate is reportable from two events.</span><span class="zh">在一次真實的儀器失效上取得 26.7 小時的提前量。兩個事件算不出錯誤率。</span></td>
+  <td class="n"><span class="en">non-predictive outside training range</span><span class="zh">訓練範圍外不具預測性</span></td>
+  <td><span class="en">Manufacture faults deliberately, three of each kind. See section 6.</span><span class="zh">刻意製造故障，每種三次。見第 6 節。</span></td></tr>
+<tr><td class="n">M11</td><td><span class="en">Photometer calibration</span><span class="zh">光度計校正</span></td><td><span class="en">Statistical. A linear fit in use, a Gaussian process with input-dependent noise as the audit.</span><span class="zh">統計型。實際使用的是線性擬合，稽核用的是帶輸入相依雜訊的高斯過程。</span></td><td class="n"><span class="en">raw signal → OD600</span><span class="zh">原始訊號 → OD600</span></td>
+  <td><span class="chip c-part">45 paired points, no replicates</span> <span class="en">The linear fit wins inside its own range, RMSE 0.0235 against the GP's 0.0254.</span><span class="zh">在自己的範圍內線性擬合勝出，RMSE 0.0235 對高斯過程的 0.0254。</span></td>
+  <td class="n">OD &lt; 1.2 <span class="en">by hand</span><span class="zh">人工設定</span><br>OD &lt; 1.55 <span class="en">learned</span><span class="zh">模型自己學到</span></td>
+  <td><span class="en">Extrapolate it. Past OD 1.2 the same linear fit goes from RMSE 0.0235 to 0.1715, which is exactly what happens in a run nobody is watching.</span><span class="zh">讓它外推就知道了。超過 OD 1.2，同一條線性擬合的 RMSE 從 0.0235 變成 0.1715，而那正是沒人盯著的長跑裡會發生的事。</span></td></tr>
+</tbody></table></div>
+
+<div class="note warn"><p><b><span class="en">M8 is a ceiling and must never be quoted as a prediction.</span><span class="zh">M8 是上限，絕不可以被當成預測引用。</span></b>
+<span class="en">The chain runs: 103,006 MEFL under saturating green from Castillo-Hair 2019 figure 5, n = 3, spread 89,769 to 127,842; converted to molecules by the sfGFP-to-fluorescein brightness ratio 0.761, giving 135,323 molecules per cell; multiplied by a cells-per-OD figure of 3.5 × 10⁸ that is <b>literature, not measured by us</b>; at OD 1.4 that lands at <b>110 nM</b>, with the literature spread on cells per OD alone giving 63 to 157 nM. The published effective dose of BoPep4 is 100 nM. So the ceiling sits at roughly 0.6 to 1.6 times the dose. But sfGFP is intracellular, stable and never secreted, while BoPep4 is a 23-residue peptide that has to cross the Sec pathway into a broth containing at least eight extracellular proteases. A real yield one to two orders of magnitude below this is entirely reasonable. <b>The value of the number is that it bounds the gap to under two logs rather than five.</b></span>
+<span class="zh">這條鏈是：Castillo-Hair 2019 圖 5，飽和綠光下 103,006 MEFL，n = 3，範圍 89,769 到 127,842；用 sfGFP 對螢光素的亮度比 0.761 換算成分子數，得每細胞 135,323 個分子；再乘上每 OD 的細胞數 3.5 × 10⁸，而這個數字是<b>文獻值，不是我們量的</b>；在 OD 1.4 時落在 <b>110 nM</b>，光是文獻上每 OD 細胞數的分散度就給出 63 到 157 nM。BoPep4 已發表的有效劑量是 100 nM。所以上限大約是有效劑量的 0.6 到 1.6 倍。但 sfGFP 是胞內的、穩定的、從不分泌；BoPep4 是一段 23 個胺基酸的胜肽，必須經 Sec 路徑分泌到一個至少含八種胞外蛋白酶的培養液裡。真實產量比這個低一到兩個數量級是完全合理的。<b>這個數字的價值在於把落差框在兩個數量級以內，而不是五個。</b></span></p></div>
+
+<figure>
+  <svg viewBox="0 0 900 340" role="img" aria-label="The 434-hour OD600 growth run">
+    <g id="gc"></g>
+  </svg>
+  <figcaption><b><span class="en">The 434-hour continuous run, drawn from the file in this repository's sibling folder.</span><span class="zh">434 小時的連續長跑，資料來自本倉庫同層資料夾內的檔案。</span></b>
+  <span class="en">Source <code>Bioreactor_UI/data/od600_growth_run_20260721.csv</code>, 221 points binned to roughly two-hour means from 2,671 valid rows of a 10-minute log, 2026-07-21 03:46 UTC to 2026-08-08 05:58 UTC, at 22 °C. Two features are marked because the software argument rests on them. The dip between 120 and 160 h is a process event: the reference channel was healthy at 26.69 lux and the scatter was normal, yet OD fell through what should have been growth. It is still unattributed. The scatter blow-up after 240 h is an instrument event: the reference channel had already stepped from 26.67 to 25.83 lux and then collapsed, and it never recovered, sitting at 21.5 lux after 300 h.</span>
+  <span class="zh">來源 <code>Bioreactor_UI/data/od600_growth_run_20260721.csv</code>，由 10 分鐘記錄的 2,671 筆有效資料歸併成約兩小時平均的 221 點，2026-07-21 03:46 UTC 到 2026-08-08 05:58 UTC，22 °C。圖上標了兩個特徵，因為整個軟體論證就靠它們。120 到 160 h 的下凹是製程事件：參考通道健康（26.69 lux）、散布正常，OD 卻在本該生長的區間下降。至今未歸因。240 h 之後散布放大是儀器事件：參考通道先從 26.67 階降到 25.83 lux，接著崩掉，而且再也沒有回復，300 h 之後停在 21.5 lux。</span>
+  <span class="no"><span class="en">What it does not show: a culture that survived 434 hours. Unbroken describes the log, not the culture. The method behind the run, the medium, the inoculum and which compartment the culture sat in, is not written down anywhere in the project.</span><span class="zh">它沒有顯示的：一個活了 434 小時的培養。「不中斷」形容的是記錄，不是培養。這次長跑的方法——培養基、接種量、培養液待在哪一個腔室——專案裡任何地方都沒有寫下來。</span></span></figcaption>
+</figure>
+
+<div class="figrow">
+<figure>
+  <img src="assets/od600-live-monitor-20260803.jpg" alt="A laptop showing the OD600 Live Monitor page mid-run, with a growth curve that dips and then recovers.">
+  <figcaption><b><span class="en">3 August 2026, the same run mid-flight.</span><span class="zh">2026 年 8 月 3 日，同一次長跑進行中。</span></b>
+  <span class="en">Elapsed time reads 12 d 22 h 50 m, which is 310.8 h, so this is a snapshot part-way through, not the finished run. Current OD600 1.4450, 1,980 data points, reference 22.5 lux against the 26.67 lux the instrument started at. The dip and the spiky region are both already visible on the trace.</span>
+  <span class="zh">已運行時間顯示 12 天 22 小時 50 分，也就是 310.8 小時，所以這是中途的快照，不是跑完的結果。當下 OD600 1.4450、1,980 個資料點、參考通道 22.5 lux，對照儀器起跑時的 26.67 lux。下凹與毛刺區在曲線上都已經看得到。</span>
+  <span class="no"><span class="en">What it does not show: the 434-hour run complete. Do not caption it as that.</span><span class="zh">它沒有顯示的：跑完的 434 小時。不要那樣寫圖說。</span></span></figcaption>
+</figure>
+<figure>
+  <img src="assets/photometer-4fold-20260719.png" alt="A screenshot of the OD600 Live Monitor showing a flat trace with two spikes then a step, with a sample to reference ratio of 8.18 times against an expected 10 to 1.">
+  <figcaption><b><span class="en">19 July 2026. The run where our photometer overestimated OD600 by roughly four-fold against a BioDrop.</span><span class="zh">2026 年 7 月 19 日，我們的光度計對照 BioDrop 高估 OD600 約四倍的那一次。</span></b>
+  <span class="en">A native screenshot, not a photo of a screen. The tile reads sample-to-reference 8.18 times where the software expects about 10 to 1, and the rejection rate is 14.3 %. The negative excursion to −0.19 near 1.4 h is a bubble in the flow cell. This figure is on the page because it is a failure: it is the measurement that told us calibration was not optional.</span>
+  <span class="zh">這是原生截圖，不是拍螢幕。磚塊顯示樣品對參考 8.18 倍，而軟體預期約 10 比 1，剔除率 14.3 %。1.4 h 附近掉到 −0.19 的負值是流道裡的氣泡。這張圖放在這裡是因為它是一次失敗：正是這個量測告訴我們，校正不是可有可無的。</span></figcaption>
+</figure>
+</div>
+
+<!-- ================= 5 ================= -->
+<h2 id="s5">5 · <span class="en">The digital twin claim</span><span class="zh">數位孿生的主張</span>
+  <span class="lead"><span class="en">Scored against the connectivity triad and the nine-step build list in Portela et al., because an overclaimed twin is the fastest way to lose a judge.</span><span class="zh">用 Portela 等人的連通性三元組與九步建置清單來打分，因為誇大的孿生是最快失去評審信任的方法。</span></span></h2>
+
+<p><span class="en">Portela et al. define a digital twin as three things together: the physical asset, the virtual asset, and <b>the bidirectional connectivity between them that enables continuous communication, data and information exchange, and implementation of the twin-induced actions</b>. The third element is the gate. A representation that receives data but cannot act is, by the definition Gargalo et al. give in the same volume, a digital shadow: the data flow from physical to digital is automated, the flow from digital to physical is not.</span>
+<span class="zh">Portela 等人把數位孿生定義成三樣東西的總和：實體資產、虛擬資產，以及<b>兩者之間的雙向連通性，使其能持續通訊、交換資料與資訊，並執行由孿生體引發的動作</b>。第三項是那道閘。一個只收資料卻不能動作的表示式，依同一本書裡 Gargalo 等人的定義，叫做「數位影子」：實體到數位的資料流是自動的，數位到實體的不是。</span></p>
+
+<div class="verdict">
+  <h3><span class="en">Our verdict on ourselves</span><span class="zh">我們對自己的判定</span></h3>
+  <p><b><span class="en">ReLeaf BR-01 is not a digital twin. It is an operator interface with a digital shadow behind it and a documented path to a twin.</span><span class="zh">ReLeaf BR-01 不是數位孿生。它是一個操作介面，後面接著一個數位影子，加上一條寫下來的、通往孿生的路。</span></b></p>
+  <p><span class="en">Sensor data flows from the reactor to the software automatically, once per second over serial. Nothing flows back automatically. Every actuation on this system is a person pressing a recipe button, and the Twin view says <code>HOLD</code>, <code>WAIT</code> or <code>GREEN ON</code> as advice, never as a command. The autonomy ladder inside the interface is currently pinned at tier 0 or 1 by design. Calling this a digital twin would be a claim about the one element that is missing.</span>
+  <span class="zh">感測資料每秒一次自動從反應器經序列埠流進軟體。沒有任何東西自動流回去。這套系統上每一個致動都是有人按下模式按鈕，而孿生畫面顯示 <code>HOLD</code>、<code>WAIT</code> 或 <code>GREEN ON</code> 都是建議，不是命令。介面裡的自主等級目前依設計就鎖在 0 或 1 級。把這個叫做數位孿生，等於是在宣稱那個唯一缺席的元素。</span></p>
+  <p><span class="en">Context worth keeping: writing in 2020, Portela and colleagues at GSK said that with one exception they were not aware of <i>any</i> fully enabled process digital twin in the pharmaceutical sector that both fosters in silico development and controls the process in real time. The gap between a high-school build and a twin is large, but so is the gap between the published industry state of the art and a twin.</span>
+  <span class="zh">值得記住的脈絡：2020 年，GSK 的 Portela 等人寫道，除了一個例外，他們不知道製藥領域裡有<i>任何</i>一個完整可用的製程數位孿生，能同時支撐虛擬開發又即時控制製程。高中生的作品離孿生很遠，但已發表的產業最先進水準離孿生也很遠。</span></p>
+</div>
+
+<h3><span class="en">The connectivity triad</span><span class="zh">連通性三元組</span></h3>
+<div class="score">
+  <div class="s"><h4><span class="en">Physical asset</span><span class="zh">實體資產</span></h4><div class="v"><span class="chip c-part">partial</span></div>
+    <p><span class="en">BR-01 exists and runs. Four pressure transducers, two pumps, three valves and a hollow-fibre module are built. The light panel L-01, the pH probe, the temperature probe, the stirrer and the base dosing loop are drawn and not built. The light actuator, which the whole induction argument depends on, is among the missing.</span><span class="zh">BR-01 存在也會運轉。四顆壓力感測器、兩顆泵、三顆閥與一支中空纖維模組是做好的。光板 L-01、pH 探針、溫度探針、攪拌器與加鹼迴路都只有圖、還沒做。整個誘導論證所依賴的光致動器，就在缺席的那一堆裡。</span></p></div>
+  <div class="s"><h4><span class="en">Virtual asset</span><span class="zh">虛擬資產</span></h4><div class="v"><span class="chip c-part">partial</span></div>
+    <p><span class="en">Eleven models exist and are inventoried in section 4. The hydraulic layer is validated on our own data. The biological layer is fitted only for growth. The light layer is entirely literature. Portela's own line applies here: the mathematical models are the heart of the twin, because its operational capacity is a strong function of their predictive capability.</span><span class="zh">十一個模型存在，第 4 節有清冊。水力層以我們自己的數據驗證過。生物層只有生長被擬合。光學層完全是文獻。Portela 自己那句話在這裡成立：數學模型是孿生的心臟，因為它的運作能力強烈取決於模型的預測能力。</span></p></div>
+  <div class="s"><h4><span class="en">Bidirectional connectivity</span><span class="zh">雙向連通性</span></h4><div class="v"><span class="chip c-no">not met</span></div>
+    <p><span class="en">Physical to virtual: automated, 1 Hz over Web Serial, when a browser is connected. Virtual to physical: a human. This is the definition's necessary condition and we do not meet it.</span><span class="zh">實體到虛擬：自動，透過 Web Serial 每秒一次，前提是瀏覽器有連上。虛擬到實體：靠人。這是定義的必要條件，我們沒有達成。</span></p></div>
+</div>
+
+<h3><span class="en">The nine-step build list, scored</span><span class="zh">九步建置清單的評分</span></h3>
+<div class="tw"><table>
+<thead><tr><th><span class="en">Step (Portela et al., section 2)</span><span class="zh">步驟（Portela 等人，第 2 節）</span></th><th><span class="en">ReLeaf</span></th><th><span class="en">Evidence, and what is missing</span><span class="zh">證據，以及缺什麼</span></th></tr></thead>
+<tbody>
+<tr><td class="n">1. Define the needs and functionalities through multi-disciplinary workshops</td><td><span class="chip c-ok">met</span></td>
+  <td><span class="en">The design basis is written down before the code: ISA-101 conventions, a named user who is not a scientist, and the rule that a reading is only wrong if the equipment behind it is supposed to be running. Recorded in <code>Bioreactor_UI/README.md</code>.</span><span class="zh">設計依據在寫程式之前就寫下來了：ISA-101 規範、一位不是科學家的明確使用者，以及「只有當設備本來就該在跑時，讀值才算不對」這條規則。記在 <code>Bioreactor_UI/README.md</code>。</span></td></tr>
+<tr><td class="n">2. Develop PAT</td><td><span class="chip c-part">partial</span></td>
+  <td><span class="en">An in-line photometer was designed, built and calibrated for linearity against a reference instrument. That is real process analytical technology. But there is <b>no product-quality measurement of any kind</b>, so the one attribute a control strategy would exist to protect cannot currently be measured at all.</span><span class="zh">管線內光度計是自己設計、製作，並對照參考儀器做過線性校正的。那是真正的製程分析技術。但<b>完全沒有任何產物品質的量測</b>，所以控制策略本來要守護的那個屬性，目前根本量不到。</span></td></tr>
+<tr><td class="n">3. Design, implement and validate the DT infrastructure</td><td><span class="chip c-part">partial</span></td>
+  <td><span class="en">Serial link, browser client, on-board HTTP server and a batch log exist and work offline. There is no historian, no database, no server-side state and no multi-user story. One machine, one batch.</span><span class="zh">序列連線、瀏覽器用戶端、板上 HTTP 伺服器與批次記錄都存在，而且離線可用。沒有歷史資料庫、沒有資料庫、沒有伺服器端狀態、沒有多使用者設計。一台機器、一個批次。</span></td></tr>
+<tr><td class="n">4. Develop, train and validate the mathematical models</td><td><span class="chip c-part">partial</span></td>
+  <td><span class="en">Developed: eleven. Validated on our own data: two, the pump curve and the membrane pressure drop. The rest are fitted to one condition, borrowed from the literature, or explicitly bounds. Sargent's criterion, quoted by Zobel-Roos, is that a model has no benefit in industrial application if it is not validated by comprehensible quantitative criteria. Nine of ours would fail that test today.</span><span class="zh">開發出來的：十一個。以我們自己的數據驗證過的：兩個，泵曲線與膜壓降。其餘的要不是只擬合了一個條件、就是借自文獻、或本來就只是上限。Zobel-Roos 引用的 Sargent 準則是：模型若沒有以可理解的量化標準驗證過，在工業應用上沒有任何好處。我們有九個今天過不了這一關。</span></td></tr>
+<tr><td class="n">5. Ensure real-time data processing and data integrity</td><td><span class="chip c-part">partial</span></td>
+  <td><span class="en">A 1 Hz scan on the MCU, a 30-minute logging interval, and a data view that shows recording status and row count live. The measurement trust layer that would police integrity exists in Python and produced the 26.7 h lead time, but <b>it is not on the board</b>. The interface uses a hand-written stand-in scoring function in its place, and says so in a code comment.</span><span class="zh">MCU 上 1 Hz 掃描、30 分鐘記錄間隔，資料畫面即時顯示記錄狀態與筆數。真正負責把關資料完整性的量測信任層存在於 Python，也產出了 26.7 小時的提前量，但<b>它不在控制板上</b>。介面用一個手寫的替代評分函式頂著，程式註解裡有寫明。</span></td></tr>
+<tr><td class="n">6. Build the automation and model predictive control</td><td><span class="chip c-no">not met</span></td>
+  <td><span class="en">There is no closed loop and no predictive control. The recipes are presets. The interlocks are protective, not optimising. This is the step the connectivity gate turns on.</span><span class="zh">沒有閉迴路，也沒有預測控制。模式是預設值。連鎖是保護用的，不是最佳化用的。連通性那道閘卡的就是這一步。</span></td></tr>
+<tr><td class="n">7. Design the user interface</td><td><span class="chip c-ok">met</span></td>
+  <td><span class="en">This is our strongest step and it is deliberately the strongest. Four-level ISA-101 hierarchy, analog context on every value, always-visible sparklines, one-touch recipes, plain-language subtitles that can be switched off, full Traditional Chinese, 48 px touch targets on the panel build, and a kiosk build that re-fits itself on resize, orientation change, ResizeObserver and a one-second poll because HDMI panels renegotiate their mode after boot and nobody is standing there to reload it.</span><span class="zh">這是我們最強的一步，而且是刻意讓它最強。四層 ISA-101 階層、每個值都帶類比脈絡、常駐迷你走勢圖、一鍵模式、可關閉的白話副標、完整繁體中文、面板版 48 px 觸控目標，以及一個會在視窗改變、方向改變、ResizeObserver 與每秒輪詢時重新校正縮放的 kiosk 版——因為 HDMI 面板開機後會重新協商顯示模式，而現場沒有人可以幫你重新整理。</span></td></tr>
+<tr><td class="n">8. Document the efforts</td><td><span class="chip c-ok">met</span></td>
+  <td><span class="en">A README carrying the serial protocol, the pin map, the process-model constants and the equipment register with build status; commented firmware; a tagged parameter file where nothing marked verify may be reported as a result; this page; and the public repository in section 8.</span><span class="zh">一份 README，裡面有序列協定、腳位對應、製程模型常數，以及帶製作狀態的設備清冊；有註解的韌體；一份帶標籤的參數檔，凡標為待驗證的都不得當成結果報出；這一頁；以及第 8 節的公開原始碼。</span></td></tr>
+<tr><td class="n">9. Integrate into a broader digital and data strategy</td><td><span class="chip c-no">not met</span></td>
+  <td><span class="en">There is no organisation to integrate with. Honest answer: this step does not apply to a high-school team, and pretending it does would be worse than saying so.</span><span class="zh">沒有可以整合的組織。誠實的答案是：這一步對高中隊伍不適用，假裝適用比直接講出來更糟。</span></td></tr>
+</tbody></table></div>
+
+<p><span class="en"><b>Score: three met, four partial, two not met.</b> Portela notes the nine steps are not entirely sequential, so this is not a progress bar. Note also that the paper contradicts itself on step numbering between its section 2 list and its worked example; the list above is quoted from section 2, which is the canonical one.</span>
+<span class="zh"><b>計分：三項達成、四項部分達成、兩項未達成。</b>Portela 指出這九步並非完全依序，所以這不是一條進度條。另外要注意，該論文第 2 節的清單與後面的實例在步驟編號上自相矛盾；上表引用的是第 2 節，也就是正式的那一份。</span></p>
+
+<h3><span class="en">Against the QbD and PAT chain</span><span class="zh">對照 QbD 與 PAT 鏈</span></h3>
+<div class="tw"><table>
+<thead><tr><th><span class="en">Link in the chain</span><span class="zh">鏈上的環節</span></th><th>ReLeaf</th><th><span class="en">Note</span><span class="zh">說明</span></th></tr></thead>
+<tbody>
+<tr><td><span class="en">Risk assessment</span><span class="zh">風險評估</span></td><td><span class="chip c-part">partial</span></td><td><span class="en">An equipment register with build status, an interlock table mirrored between firmware and interface, and a limits table. No Ishikawa diagram, no FMEA, no risk priority numbers. The paper's own warning applies to us: parameters must not be excluded on presumption before data rule them out.</span><span class="zh">有帶製作狀態的設備清冊、一份在韌體與介面之間互相對照的連鎖表，以及一份上下限表。沒有魚骨圖、沒有 FMEA、沒有風險優先數。論文自己的警告對我們成立：在數據排除之前，不可以憑臆測排除任何參數。</span></td></tr>
+<tr><td><span class="en">CQA and CPP</span><span class="zh">關鍵品質屬性與關鍵製程參數</span></td><td><span class="chip c-no">not met</span></td><td><span class="en">We have candidate critical process parameters, light intensity, cross-flow, pH, temperature. We have <b>no critical quality attribute at all</b>, because no product has ever been measured. Without a CQA there is nothing for a control strategy to control toward.</span><span class="zh">我們有候選的關鍵製程參數：光強度、掃流量、pH、溫度。但我們<b>完全沒有關鍵品質屬性</b>，因為從來沒有量過產物。沒有 CQA，控制策略就沒有可以趨近的目標。</span></td></tr>
+<tr><td><span class="en">Design space</span><span class="zh">設計空間</span></td><td><span class="chip c-no">not met</span></td><td><span class="en">A single recommended operating point, 263 mL/min, with ceilings at 300 mL/min and 0.5 bar. That is an operating point with guard rails, not a characterised design space.</span><span class="zh">只有一個建議操作點 263 mL/min，加上 300 mL/min 與 0.5 bar 的上限。那是一個帶護欄的操作點，不是被特性化過的設計空間。</span></td></tr>
+<tr><td><span class="en">Control strategy</span><span class="zh">控制策略</span></td><td><span class="chip c-part">partial</span></td><td><span class="en">Three MCU interlocks, alarm bands on every tag, and five recipes. All protective or preset. None of it closes a loop on a quality attribute.</span><span class="zh">三條 MCU 連鎖、每個標籤都有警報帶、五個模式。全部是保護性或預設值。沒有任何一項針對品質屬性閉迴路。</span></td></tr>
+<tr><td>PAT</td><td><span class="chip c-part">partial</span></td><td><span class="en">Pressure is measured directly. Flow is a soft sensor off the pump curve. Cell density is a soft sensor off the photometer, calibrated for linearity but not for cell count. Product is not measured by anything.</span><span class="zh">壓力是直接量的。流量是從泵曲線推出的軟感測。菌體密度是從光度計推出的軟感測，做過線性校正但沒有做過細胞數校正。產物沒有任何東西在量。</span></td></tr>
+<tr><td><span class="en">RTRT and APC</span><span class="zh">即時放行與先進製程控制</span></td><td><span class="chip c-no">not met</span></td><td><span class="en">Neither exists, and neither can exist before a product measurement does.</span><span class="zh">兩個都不存在，而且在有產物量測之前也不可能存在。</span></td></tr>
+</tbody></table></div>
+
+<div class="note info"><p><b><span class="en">One finding from our own data that argues against the obvious closed loop.</span><span class="zh">我們自己的數據裡有一個發現，反對那個看起來最理所當然的閉迴路。</span></b>
+<span class="en">Applying two induction policies retrospectively to the 434-hour run: a fixed clock at 100 h and a live trigger on µ falling below 0.006 h⁻¹ both fire at about 100 to 103 h, at OD around 0.90. The culture then falls to OD 0.629, grows for another hundred hours, and settles at a clean plateau of 1.473. Both policies therefore induce at 61 % of final biomass. The reference channel reads 26.67 to 26.69 lux throughout that window, so it is not a sensor artefact. <b>A threshold closed loop is not better than a fixed recipe here; it is wrong in a different way.</b> The hard part of closing the loop is not the actuator, it is deciding whether the measured state is real and whether it will hold. That is one counterexample from one run, not an error rate, and we raise it before a judge does.</span>
+<span class="zh">把兩種誘導策略回溯套用到 434 小時的長跑上：固定在 100 h 的時鐘，以及在 µ 掉到 0.006 h⁻¹ 以下時觸發的即時判斷，兩者都在大約 100 到 103 h、OD 約 0.90 時觸發。培養接著掉到 OD 0.629，再長一百小時，最後穩定在乾淨的高原值 1.473。所以兩種策略都在最終生物量的 61 % 時誘導。那段區間內參考通道讀值是 26.67 到 26.69 lux，所以這不是感測器假象。<b>在這裡，門檻式閉迴路並不比固定配方好，它只是用另一種方式錯。</b>閉迴路真正難的不是致動器，而是判斷量到的狀態是不是真的、以及它會不會維持。這是一次長跑的一個反例，不是錯誤率，而我們在評審提出之前先講。</span></p></div>
+
+<!-- ================= 6 ================= -->
+<h2 id="s6">6 · <span class="en">Validation, and the experimental data still needed</span><span class="zh">驗證，以及還缺的實驗數據</span>
+  <span class="lead"><span class="en">Sixteen measurements. For each one: the variable, its unit, why the software needs it, the experiment that produces it, and what it unblocks.</span><span class="zh">十六項量測。每一項都寫出：變數、單位、軟體為什麼需要它、哪個實驗會產出它、以及它解開什麼。</span></span></h2>
+
+<h3><span class="en">What is already validated</span><span class="zh">已經驗證的部分</span></h3>
+<ul>
+  <li><span class="en"><b>The pump curve.</b> Nine settings from 0 to 24 % against measured flow and system pressure drop at 22 °C. 12 % gives 163.3 mL/min at 1.494 psi; the recommended operating point of 263 mL/min sits at 16 %.</span><span class="zh"><b>泵曲線。</b>0 到 24 % 共九個設定，對應實測流量與系統壓降，22 °C。12 % 給出 163.3 mL/min、1.494 psi；建議操作點 263 mL/min 落在 16 %。</span></li>
+  <li><span class="en"><b>The membrane pressure drop.</b> ΔP_net(Q) = 2.427 × 10⁻⁴ Q + 4.604 × 10⁻⁷ Q² bar, forced through the origin, R² 0.9954, residual SD 0.0101 bar. The rig itself accounts for 46 to 55 % of total ΔP, so without the background subtraction the module's resistance would be overstated about twofold. Two independent routes to wall shear, one needing the fibre count and one not, agree to 2.8 %.</span><span class="zh"><b>膜壓降。</b>ΔP_net(Q) = 2.427 × 10⁻⁴ Q + 4.604 × 10⁻⁷ Q² bar，強制過原點，R² 0.9954，殘差 SD 0.0101 bar。設備本身佔總壓降的 46 到 55 %，所以不扣背景的話，模組阻力會被高估約兩倍。兩條各自獨立算壁面剪應力的路徑，一條需要纖維數、一條不需要，結果差 2.8 %。</span></li>
+  <li><span class="en"><b>Photometer linearity.</b> Against known TiO₂ dose, our instrument gives R² 0.9967 below 30 mg and R² 0.9901 above it. Against a BioDrop below OD 1.2, y = 1.018x − 0.031, R² 0.995, residual SD 0.024. Scored against known dose rather than against each other, the instrument that misbehaves above 30 mg is the BioDrop, R² 0.8501 and residual SD 0.116 against our 0.9901 and 0.0209. An earlier internal report said neither instrument was usable above OD 1.2; that was not accurate enough and has been corrected here.</span><span class="zh"><b>光度計線性。</b>對照已知 TiO₂ 加藥量，我們的儀器在 30 mg 以下 R² 0.9967、以上 R² 0.9901。對照 BioDrop、在 OD 1.2 以下，y = 1.018x − 0.031，R² 0.995，殘差 SD 0.024。若以已知劑量而非互相對照來評分，30 mg 以上出問題的是 BioDrop：R² 0.8501、殘差 SD 0.116，對我們的 0.9901 與 0.0209。早先一份內部報告說兩台在 OD 1.2 以上都不能用；那個講法不夠精確，這裡更正。</span></li>
+  <li><span class="en"><b>That the instrument can say when to distrust itself.</b> Trained on the first 120 h of the 434-hour run only, with the alarm limit fixed at the 99.5th percentile of the training score before any result was looked at, the trust layer raised a sensor alarm at 216.3 h. The OD channel became unusable at 243.0 h. <b>Lead time 26.7 h.</b> An autoencoder and a PCA-based method tie on the sensor axis; the autoencoder beats it on the process axis, 72.9 % against 11.3 %, which is the only place the neural model earns its keep. A plain threshold on |dOD| &gt; 0.05 fires on 23.1 % of the sensor event and 0.8 % of the process event and cannot tell you which is which.</span><span class="zh"><b>儀器能說出什麼時候不該相信自己。</b>只用 434 小時長跑的前 120 h 訓練，警報上限在看到任何結果之前就固定為訓練分數的 99.5 百分位，信任層在 216.3 h 發出感測器警報。OD 通道在 243.0 h 變得不可用。<b>提前量 26.7 小時。</b>自編碼器與以 PCA 為基礎的方法在感測器軸上打平；自編碼器在製程軸上勝出，72.9 % 對 11.3 %，那是唯一一個類神經模型真的有價值的地方。單純用 |dOD| &gt; 0.05 的門檻，會在感測器事件的 23.1 % 與製程事件的 0.8 % 上觸發，而且無法分辨是哪一種。</span></li>
+</ul>
+
+<div class="figrow">
+<figure>
+  <img src="assets/tio2-calibration-20260823.jpg" alt="A student in a lab coat adding suspension to a stirred bottle connected by tubing to a photometer and a breadboard, with an instructor seated beside a handwritten data sheet.">
+  <figcaption><b><span class="en">23 August 2026. The calibration itself.</span><span class="zh">2026 年 8 月 23 日，校正本身。</span></b>
+  <span class="en">Cumulative 1 mg TiO₂ additions from 2 to 60 mg into a stirred 400 mL recirculating loop, our in-line photometer on the loop and a BioDrop read in parallel to 46 mg. The readings are being written down by hand on the sheet at right.</span>
+  <span class="zh">在一個攪拌中的 400 mL 循環迴路裡，累積加入 TiO₂，每次 1 mg，從 2 mg 加到 60 mg；我們的管線內光度計掛在迴路上，同時用 BioDrop 平行讀到 46 mg。讀值正被手寫記在右邊那張紙上。</span>
+  <span class="no"><span class="en">What it does not show: replicates. One reading per point, no repeats, and the additions are cumulative so error accumulates along the series. TiO₂ gives linearity, not cell count.</span><span class="zh">它沒有顯示的：重複試驗。每個點只讀一次、沒有重複，而且加藥是累積的，所以誤差會沿著序列累積。TiO₂ 給的是線性，不是細胞數。</span></span></figcaption>
+</figure>
+<figure>
+  <img src="assets/reactor-running-20260720.jpg" alt="The bioreactor running inside a growth chamber: an amber culture bottle on a stirrer, the black 3D-printed photometer column, tubing and a breadboard.">
+  <figcaption><b><span class="en">20 July 2026. The rig that produced the 434-hour run.</span><span class="zh">2026 年 7 月 20 日，跑出 434 小時長跑的那套設備。</span></b>
+  <span class="en">Amber culture on a magnetic stirrer, the 3D-printed photometer column in the loop with the culture flowing straight through the cuvette, a breadboard on a chipboard offcut, plants on the shelf above. Nothing is opened and nothing is drawn off for the optical reading.</span>
+  <span class="zh">琥珀色培養液放在磁攪拌器上，3D 列印的光度計柱體接在迴路上，培養液直接流過比色槽，麵包板放在一塊裁剩的木片上，上一層架子是植物。光學讀值不需要打開任何東西，也不用抽取樣品。</span>
+  <span class="no"><span class="en">What it does not show: the BR-01 with its full instrument set. The pH probe, the temperature probe, the stirrer and the light panel are not in this frame because they are not built.</span><span class="zh">它沒有顯示的：儀器裝齊的 BR-01。pH 探針、溫度探針、攪拌器與光板不在畫面裡，因為它們還沒做出來。</span></span></figcaption>
+</figure>
+</div>
+
+<h3><span class="en">The sixteen measurements the wet lab still owes the software</span><span class="zh">濕實驗室還欠軟體的十六項量測</span></h3>
+<p><span class="en">Ordered by how much of the model stack each one unblocks. Read this as a work list, not a wish list.</span><span class="zh">依每一項能解開多少模型排序。請把它當工作清單看，不是願望清單。</span></p>
+
+<div class="tw"><table>
+<thead><tr><th>#</th><th><span class="en">What is missing</span><span class="zh">缺什麼</span></th><th><span class="en">Unit</span><span class="zh">單位</span></th><th><span class="en">The experiment</span><span class="zh">實驗</span></th><th><span class="en">What it unblocks</span><span class="zh">解開什麼</span></th></tr></thead>
+<tbody>
+<tr class="hl"><td class="n">E1</td><td><span class="en">Our own Hill fit for CcaSR: n and K½ with confidence intervals, in our strain</span><span class="zh">我們自己的 CcaSR Hill 擬合：在我們的菌株上量到的 n 與 K½，含信賴區間</span></td><td class="n">—, µmol·m⁻²·s⁻¹</td>
+  <td><span class="en">LPA dose-response. Nine green intensities log-spaced 0.1 to 50 µmol·m⁻²·s⁻¹ around the literature K½ of 4.7, two wells each, red-only and dark controls, three independent runs. Red preconditioning 0 to 3 to 5 h, then green induction to 8 to 10 h while still exponential. Harvest by ice quench at OD 0.08 to 0.15, lyse, normalise load to OD, SDS-PAGE, anti-His₆ immunoblot, densitometry, fit the Hill function. The full protocol is drawn below.</span><span class="zh">LPA 劑量反應。九個綠光強度，以文獻 K½ 4.7 為中心，在 0.1 到 50 µmol·m⁻²·s⁻¹ 之間對數等距，每個強度兩孔，另設純紅光與全暗對照，三次獨立重複。0 到 3 至 5 h 紅光預處理，接著綠光誘導到 8 至 10 h、仍在指數期。在 OD 0.08 到 0.15 冰浴急停收樣，破菌，依 OD 正規化上樣量，SDS-PAGE，anti-His₆ 免疫墨點，密度定量，擬合 Hill 函數。完整流程見下圖。</span></td>
+  <td><span class="en">M6 and everything downstream of it, including M8. This is the single highest-value experiment on the list.</span><span class="zh">M6 以及它下游的一切，包含 M8。這是清單上價值最高的一個實驗。</span></td></tr>
+<tr class="hl"><td class="n">E2</td><td><span class="en">Calibrated photon flux at the well and at the vessel wall</span><span class="zh">在孔內與容器壁上的校正光通量</span></td><td class="n">µmol·m⁻²·s⁻¹</td>
+  <td><span class="en">Buy a PAR or quantum sensor. Measure the output of each LPA well and of the L-01 panel at the vessel, at several duty cycles, and store the per-well calibration file. Saturating targets computed from Castillo-Hair convert to about 1.12 mW/cm² green and 0.36 mW/cm² red, which is trivially low power. <b>The panel is easy. The calibration is the part that must not be skipped</b>, because without it every optimiser is turning an unmarked dial.</span><span class="zh">買一支 PAR 或量子感測器。量測每一個 LPA 孔以及 L-01 光板在容器處的輸出，涵蓋數個工作週期，並存下每孔的校正檔。由 Castillo-Hair 換算出的飽和目標約為綠光 1.12 mW/cm²、紅光 0.36 mW/cm²，功率低到不成問題。<b>光板很簡單，不可以跳過的是校正</b>，否則任何最佳化演算法都是在轉一個沒有刻度的旋鈕。</span></td>
+  <td><span class="en">The x-axis of E1. Without it the dose-response has no units and cannot be compared to anyone else's.</span><span class="zh">E1 的 x 軸。沒有它，劑量反應曲線沒有單位，也無法跟任何人的結果比較。</span></td></tr>
+<tr class="hl"><td class="n">E3</td><td><span class="en">Cells per mL per unit OD600, on our photometer, for our strain</span><span class="zh">我們的菌株、在我們的光度計上，每單位 OD600 對應每 mL 多少細胞</span></td><td class="n">cells·mL⁻¹·OD⁻¹</td>
+  <td><span class="en">A cell dilution series against plate counts and against dry cell weight, n = 3 per point, with a stated limit of detection. Run it on the in-line photometer, not only on a benchtop instrument.</span><span class="zh">一組細胞稀釋系列，同時對照平板計數與乾細胞重，每點 n = 3，並註明偵測極限。要在管線內光度計上跑，不能只在桌上型儀器上跑。</span></td>
+  <td><span class="en">M8. This literature figure, 2 to 5 × 10⁸, is the largest single multiplier in the yield chain and is currently not ours. It also converts the TiO₂ calibration from a linearity check into a cell-density calibration, which is what a Measurement claim actually needs.</span><span class="zh">M8。文獻值 2 到 5 × 10⁸ 是產率鏈裡最大的單一乘數，而它現在不是我們的。它也會把 TiO₂ 校正從「線性檢查」升級成「細胞密度校正」，那才是 Measurement 論證真正需要的東西。</span></td></tr>
+<tr><td class="n">E4</td><td><span class="en">Grams dry cell weight per litre per unit OD600</span><span class="zh">每公升每單位 OD600 的乾細胞重</span></td><td class="n">g·L⁻¹·OD⁻¹</td>
+  <td><span class="en">Same dilution series, filter and dry to constant mass. Literature spans 0.25 to 0.85, which is a factor of three.</span><span class="zh">同一組稀釋系列，過濾後烘乾至恆重。文獻範圍 0.25 到 0.85，相差三倍。</span></td>
+  <td><span class="en">Every mass balance. The parameter file currently carries this as null with the note that it must be measured on our own spectrophotometer.</span><span class="zh">所有質量平衡。參數檔目前把它記為 null，並註明必須在我們自己的分光光度計上量。</span></td></tr>
+<tr><td class="n">E5</td><td><span class="en">Induction kinetics in our system: t½ on and t½ off</span><span class="zh">我們系統裡的誘導動力學：t½ 開與 t½ 關</span></td><td class="n">min</td>
+  <td><span class="en">Step change red to green, then green to red. Sample every 15 min for 6 h. Same readout as E1.</span><span class="zh">紅轉綠、再綠轉紅的階躍。每 15 分鐘取樣一次，做 6 小時。讀值方法同 E1。</span></td>
+  <td><span class="en">M7 and the lead-time chain. The borrowed 105.1 min is the only latency number the project has, and any page using it must say it is borrowed in the same sentence.</span><span class="zh">M7 與整條前置時間鏈。借來的 105.1 分鐘是這個專案唯一的延遲數字，任何用到它的頁面都必須在同一句話裡說明它是借來的。</span></td></tr>
+<tr><td class="n">E6</td><td><span class="en">Any measured titre of the product at all</span><span class="zh">任何一個產物的實測效價</span></td><td class="n">µg·mL⁻¹</td>
+  <td><span class="en">Anti-His₆ Western on permeate and on lysate, with a dilution series first to fix the linear range. An orthogonal readout, ACC to α-ketobutyrate derivatised with DNPH and read at A₅₄₀, has a wider linear range and should anchor the blot.</span><span class="zh">對透過液與菌體裂解液做 anti-His₆ 西方墨點，先做稀釋系列確定線性範圍。另一條正交讀值——ACC 轉成 α-酮丁酸、以 DNPH 衍生化後在 A₅₄₀ 讀值——線性範圍較寬，應該用它來錨定墨點。</span></td>
+  <td><span class="en">M8 stops being a bound and becomes a comparison. It is also the only thing that creates a critical quality attribute, and therefore the only thing that makes a control strategy possible at all.</span><span class="zh">M8 從上限變成可比對的對象。它也是唯一能產生關鍵品質屬性的東西，因此也是唯一能讓控制策略成立的前提。</span></td></tr>
+<tr><td class="n">E7</td><td><span class="en">Secretion parameters q_P, α, β and the degradation rate k_deg</span><span class="zh">分泌參數 q_P、α、β 與降解速率 k_deg</span></td><td class="n">µg·mL⁻¹·OD⁻¹·h⁻¹, h⁻¹</td>
+  <td><span class="en">A permeate time course during a batch, sampled often enough to separate the growth-associated term from the non-growth term in a Luedeking-Piret fit. Report q_P at three assumed k_deg values, 0.01, 0.03 and 0.1 h⁻¹, until k_deg itself is measured.</span><span class="zh">在一個批次中對透過液做時間序列取樣，取樣密度要足以在 Luedeking-Piret 擬合中把生長相關項與非生長相關項分開。在 k_deg 自己被量到之前，先在 0.01、0.03、0.1 h⁻¹ 三個假設值下分別報 q_P。</span></td>
+  <td><span class="en">The secretion layer of the model, which currently has every parameter tagged verify.</span><span class="zh">模型的分泌層，目前每一個參數都標為待驗證。</span></td></tr>
+<tr><td class="n">E8</td><td><span class="en">Membrane wall properties: porosity ε, tortuosity τ, wall thickness δ</span><span class="zh">膜壁性質：孔隙率 ε、彎曲度 τ、壁厚 δ</span></td><td class="n">—, —, µm</td>
+  <td><span class="en">Ask the supplier first; these were not supplied for this module. Failing that, measure the wall on a cut fibre and back out the pair from a diffusion experiment with a tracer of known diffusivity.</span><span class="zh">先問供應商；這支模組沒有附這些數據。若拿不到，就切開纖維量壁厚，再用已知擴散係數的示蹤物做擴散實驗反推另外兩個。</span></td>
+  <td><span class="en">Diffusive transport, which is what carries the product when trans-membrane pressure is unresolvable. The current estimate spans 0.045 to 0.817 mL/min equivalent at 22 °C, a factor of eighteen.</span><span class="zh">擴散傳輸——當跨膜壓差解析不出來時，靠的就是它。目前估計在 22 °C 下跨越 0.045 到 0.817 mL/min 當量，相差十八倍。</span></td></tr>
+<tr><td class="n">E9</td><td><span class="en">Shell-side hydraulic characterisation</span><span class="zh">殼側水力特性化</span></td><td class="n">mL/min, bar</td>
+  <td><span class="en">Repeat the 2026-08-16 lumen protocol on the shell loop: eight pump settings, module fitted and module replaced by a jumper, background subtracted.</span><span class="zh">把 2026-08-16 的管腔側流程在殼側迴路上重做一次：八個泵設定，一次裝模組、一次用跳接管取代，並扣掉背景。</span></td>
+  <td><span class="en">PT-04 and PT-05 stop being derived from the lumen pump curve, which is what makes the displayed trans-membrane pressure indicative rather than measured.</span><span class="zh">PT-04 與 PT-05 不再是從管腔側泵曲線推出來的——正是這一點讓現在顯示的跨膜壓差只是「指示性」而非量測值。</span></td></tr>
+<tr><td class="n">E10</td><td><span class="en">Zero all four pressure transducers, then re-measure TMP</span><span class="zh">四顆壓力感測器全部歸零後重量 TMP</span></td><td class="n">bar</td>
+  <td><span class="en">Open every transducer to atmosphere, record the offset, apply it, and repeat a steady-state reading at the operating point with the loop actually steady rather than during a transient.</span><span class="zh">把每顆感測器對大氣開放、記下偏移量、套用修正，然後在迴路真正穩定時（不是在暫態中）重讀一次操作點的穩態值。</span></td>
+  <td><span class="en">M3, and the permeate flow that depends on it. An audit found the displayed TMP indistinguishable from zero, with a ±0.055 bar interval against a 0.30 bar design point.</span><span class="zh">M3，以及依賴它的透過流量。稽核發現顯示的 TMP 與零無法區分，在 0.30 bar 的設計點上帶著 ±0.055 bar 的區間。</span></td></tr>
+<tr><td class="n">E11</td><td><span class="en">Permeate flow at the operating point</span><span class="zh">操作點的透過流量</span></td><td class="n">mL/min</td>
+  <td><span class="en">Collect and weigh permeate over a fixed interval at 263 mL/min cross-flow.</span><span class="zh">在 263 mL/min 掃流下，於固定時間內收集透過液並秤重。</span></td>
+  <td><span class="en">The parameter file records Q_p as 0.0 with the note that the 2.5 mL/min used elsewhere is a design specification, not a measurement. The daily harvest volume, and therefore the litres of root-zone solution a reactor can dose, is currently a design number.</span><span class="zh">參數檔把 Q_p 記為 0.0，並註明其他地方用的 2.5 mL/min 是設計規格、不是量測值。每日收穫體積、以及一台反應器能施用多少公升根區溶液，目前都只是設計數字。</span></td></tr>
+<tr><td class="n">E12</td><td><span class="en">Reactor operating mode, lumen volume V_L and shell volume V_S</span><span class="zh">反應器操作模式、管腔體積 V_L 與殼側體積 V_S</span></td><td class="n">—, mL</td>
+  <td><span class="en">Not an experiment. Measure the volumes and write down which of closed, harvest or dead-end mode each run used. This is currently unrecorded.</span><span class="zh">這不是實驗。把體積量出來，並寫下每一次運轉用的是封閉、收穫或死端模式中的哪一種。這件事目前沒有記錄。</span></td>
+  <td><span class="en">The whole mass balance. V_S dominates the diffusive equilibration time, and without the operating mode the balance cannot be closed at all.</span><span class="zh">整個質量平衡。V_S 主導擴散平衡時間，而沒有操作模式，平衡根本無法閉合。</span></td></tr>
+<tr><td class="n">E13</td><td><span class="en">Fault labels for the trust layer</span><span class="zh">信任層的故障標記</span></td><td class="n"><span class="en">events</span><span class="zh">事件數</span></td>
+  <td><span class="en">Manufacture faults deliberately, three of each kind: occlude the light path, swap the light source, foul the membrane. That takes the event count from 2 to 18 and lets a false-positive rate be reported for the first time.</span><span class="zh">刻意製造故障，每一種三次：遮擋光路、換掉光源、讓膜結垢。這會把事件數從 2 提高到 18，並讓偽陽性率第一次可以被報出來。</span></td>
+  <td><span class="en">M10. Two events found in one run cannot support an error rate, and until one exists the layer cannot be wired in as an interlock.</span><span class="zh">M10。一次長跑裡找到兩個事件不足以支撐錯誤率，在錯誤率出現之前，這一層不能接成連鎖保護。</span></td></tr>
+<tr><td class="n">E14</td><td><span class="en">Volumetric oxygen mass transfer coefficient k_La</span><span class="zh">體積氧氣質傳係數 k_La</span></td><td class="n">h⁻¹</td>
+  <td><span class="en">Gassing-in method, not yet run.</span><span class="zh">gassing-in 法，尚未執行。</span></td><td><span class="en">Whether growth in the chamber is oxygen limited, which the growth model currently assumes it is not.</span><span class="zh">腔室內的生長是不是受氧限制——生長模型目前假設不是。</span></td></tr>
+<tr><td class="n">E15</td><td><span class="en">Method metadata for the 434-hour run</span><span class="zh">434 小時長跑的方法紀錄</span></td><td class="n">—</td>
+  <td><span class="en">Not an experiment either. Write down the medium, the inoculum, whether light control was running, and which compartment the culture sat in. None of it is recorded anywhere.</span><span class="zh">這也不是實驗。把培養基、接種量、當時光控有沒有在跑、培養液待在哪一個腔室寫下來。這些目前任何地方都沒有記錄。</span></td>
+  <td><span class="en">The comparison between this run and the 2026-06-10 lumen null result. Against the measured µ, that null could only have gained 0.027 OD in 4.5 h, below its own 0.033 SD; 13.8 h were needed for three standard deviations. <b>That null was underpowered, not negative</b>, and the argument cannot be made airtight without the method.</span><span class="zh">這次長跑與 2026-06-10 管腔內無生長結果的比較。對照實測的 µ，那個結果在 4.5 h 內最多只能長 0.027 OD，低於它自己的 0.033 SD；要達到三倍標準差需要 13.8 h。<b>那個陰性結果是檢定力不足，不是真的陰性</b>，而沒有方法紀錄，這個論證就無法做到滴水不漏。</span></td></tr>
+<tr><td class="n">E16</td><td><span class="en">Which strain it actually is</span><span class="zh">到底是哪一株</span></td><td class="n">—</td>
+  <td><span class="en">Ask, and then write it in one place. The strain is named three different ways across our own documents: 168 on the growth curves, PY79 or 168 in the invariants dossier, and WB800, a protease-deficient derivative of 168, in the hydraulics report.</span><span class="zh">問清楚，然後寫在同一個地方。我們自己的文件裡這株菌有三種寫法：生長曲線寫 168、不變量文件寫 PY79 或 168、水力報告寫 WB800（168 的蛋白酶缺陷衍生株）。</span></td>
+  <td><span class="en">The protease question in M8, and any comparison between runs. Nothing that names the strain should be published until this is settled.</span><span class="zh">M8 裡的蛋白酶問題，以及任何跨批次的比較。在這件事釐清之前，任何指名菌株的東西都不該發表。</span></td></tr>
+</tbody></table></div>
+
+<figure>
+  <img src="assets/lpa-dose-response-protocol.png" alt="A four-panel protocol schematic for a green-light dose-response experiment: strain design, culture and LPA hardware, the light program and dose ladder, and the harvest to immunoblot to Hill fit workflow.">
+  <figcaption><b><span class="en">E1 and E2, drawn out. The experiment that would replace the borrowed Hill parameters with ours.</span><span class="zh">E1 與 E2 畫出來的樣子。這個實驗會把借來的 Hill 參數換成我們自己的。</span></b>
+  <span class="en">Panel A is the strain design, panel B the culture set-up and the LPA cross-section, panel C the dose ladder of nine green intensities log-spaced around K½, and panel D the harvest through anti-His₆ immunoblot to the Hill fit, with an orthogonal α-ketobutyrate readout recommended to anchor the densitometry. The schematic was drawn in-house for this wiki from original vector shapes.</span>
+  <span class="zh">A 是菌株設計，B 是培養設定與 LPA 剖面，C 是以 K½ 為中心對數等距的九個綠光強度劑量階梯，D 是從收樣經 anti-His₆ 免疫墨點到 Hill 擬合，並建議用 α-酮丁酸的正交讀值來錨定密度定量。這張圖是為本 wiki 自行以原始向量圖形繪製的。</span>
+  <span class="no"><span class="en">What it does not show: any result. Panels C and D depict a planned protocol and an illustrative fit. The bands in the blot panel are drawn, not densitometry, and the curve is the published Castillo-Hair fit shown as the target this experiment would replace. No induction curve exists in our hands.</span><span class="zh">它沒有顯示的：任何結果。C 與 D 兩欄畫的是規劃中的流程與示意用的擬合。墨點欄裡的條帶是畫上去的，不是密度定量，曲線是已發表的 Castillo-Hair 擬合，用來標示這個實驗要取代的目標。我們手上不存在任何誘導曲線。</span></span></figcaption>
+</figure>
+
+<figure>
+  <img src="assets/lpa-assembled-20260717.jpg" alt="A black 3D-printed Light Plate Apparatus base with a white 24-well adapter on top, wells lit alternately green and red.">
+  <figcaption><b><span class="en">17 July 2026. The instrument that would run E1, assembled for the first time.</span><span class="zh">2026 年 7 月 17 日，會執行 E1 的那台儀器，第一次組裝完成。</span></b>
+  <span class="en">A Light Plate Apparatus built to the open-hardware design of Gerhardt et al. 2016, with the 3D-printed parts made in house. Twenty-four wells, each with a paired green and red LED, individually addressable so every well can hold a different intensity while sharing one harvest time.</span>
+  <span class="zh">依 Gerhardt 等人 2016 年的開放硬體設計製作的 Light Plate Apparatus，3D 列印件自行製作。24 個孔，每孔一組綠光與紅光 LED，可個別定址，所以每一孔可以有不同強度，卻共用同一個收樣時間。</span>
+  <span class="no"><span class="en">What it does not show: a calibrated device or a culture. The per-well photon flux has not been measured, which is E2, and no dose-response has been run in it.</span><span class="zh">它沒有顯示的：一台校正過的裝置，或任何培養。每一孔的光子通量還沒量過，那就是 E2；也還沒有在裡面跑過任何劑量反應。</span></span></figcaption>
+</figure>
+
+<div class="note warn"><p><b><span class="en">One constraint that shapes all of this, and it is not a software constraint.</span><span class="zh">有一個限制決定了以上所有安排，而它不是軟體限制。</span></b>
+<span class="en">A batch at 22 °C takes 434 h, which is 18.1 days. Five batches is 90 days. Growth at 37 °C is measured at µ 0.92 h⁻¹ against 0.0329 h⁻¹ at 22 °C, a factor of 28, so OD 0.08 to 1.4 takes 3.1 h and a round is about 12 h. The plan is therefore to fit the biology on parallel small vessels at 37 °C, take the hardware layer from existing reactor data, and validate once on BR-01, keeping one or two batches at 22 °C as an explicit transfer test. <b>The bottleneck is not the software.</b> Modelling, fitting, state estimation and the trust layer are days of work on top of what already exists. Thirty to forty batches are weeks of wet lab and cannot be compressed or simulated.</span>
+<span class="zh">22 °C 下一個批次要 434 小時，也就是 18.1 天。五個批次就是 90 天。37 °C 下實測 µ 為 0.92 h⁻¹，對照 22 °C 的 0.0329 h⁻¹，相差 28 倍，所以 OD 從 0.08 到 1.4 只要 3.1 小時，一輪約 12 小時。因此計畫是：在 37 °C 的平行小容器上擬合生物層，硬體層沿用既有的反應器數據，最後在 BR-01 上驗證一次，並刻意保留一到兩個 22 °C 的批次當作轉移測試。<b>瓶頸不是軟體。</b>建模、擬合、狀態估計與信任層，在既有基礎上都只是幾天的工作。三十到四十個批次是好幾週的濕實驗室工作，壓縮不了，也模擬不來。</span></p></div>
+
+<!-- ================= 7 ================= -->
+<h2 id="s7">7 · <span class="en">Reusability</span><span class="zh">可重複使用性</span>
+  <span class="lead"><span class="en">What another team would actually have to change, where the change goes, and what hardware is assumed.</span><span class="zh">另一個隊伍實際上要改什麼、改在哪裡、以及預設了什麼硬體。</span></span></h2>
+
+<p><span class="en">The honest scope first. This is not a general-purpose bioprocess platform and does not pretend to be. What generalises is the shell: an offline, single-file, bilingual, ISA-101 operator interface with an alarm model, a batch recorder, a serial link and a device register, into which another team drops their own tags and their own board. What does not generalise is the process model, which is ours and is stated as ours everywhere it appears.</span>
+<span class="zh">先講清楚範圍。這不是一個通用的生物製程平台，也不假裝是。可以通用的是外殼：一個離線、單檔、雙語、依 ISA-101 設計的操作介面，帶警報模型、批次記錄器、序列連線與設備清冊，另一個隊伍把自己的標籤與自己的控制板放進去。不能通用的是製程模型，那是我們的，凡出現的地方都寫明是我們的。</span></p>
+
+<h3><span class="en">Getting it running: three commands, no install</span><span class="zh">跑起來：三個指令，不用安裝</span></h3>
+<ol>
+  <li><span class="en"><b>To look at it.</b> Open <code>ui/0906UI.html</code> in Chrome or Edge. That is the whole instruction. Process values are simulated so the interface can be demonstrated with no rig attached.</span><span class="zh"><b>只是要看。</b>用 Chrome 或 Edge 打開 <code>ui/0906UI.html</code>。指令就這一句。製程數值是模擬的，所以沒有接設備也能展示介面。</span></li>
+  <li><span class="en"><b>To connect a board.</b> Serve the folder over HTTP, <code>python3 -m http.server 8080</code>, open <code>http://localhost:8080/</code>, and press Connect board. Web Serial does not work from <code>file://</code>, which is the one thing that trips everybody up.</span><span class="zh"><b>要接控制板。</b>用 HTTP 供應資料夾：<code>python3 -m http.server 8080</code>，打開 <code>http://localhost:8080/</code>，按「連接控制板」。Web Serial 在 <code>file://</code> 下不會動，這是每個人都會踩到的那一個坑。</span></li>
+  <li><span class="en"><b>To build the panel version.</b> <code>python3 build_kiosk.py</code>. Never edit the kiosk file by hand; the next build overwrites it.</span><span class="zh"><b>要做面板版。</b><code>python3 build_kiosk.py</code>。不要手動編輯 kiosk 檔，下一次建置會覆蓋掉。</span></li>
+</ol>
+
+<h3><span class="en">What to change, and where</span><span class="zh">要改什麼，改在哪裡</span></h3>
+<div class="tw"><table>
+<thead><tr><th><span class="en">To change</span><span class="zh">要改的東西</span></th><th><span class="en">Edit</span><span class="zh">改哪裡</span></th><th><span class="en">Notes</span><span class="zh">注意事項</span></th></tr></thead>
+<tbody>
+<tr><td><span class="en">Your sensors and their units</span><span class="zh">你的感測器與單位</span></td><td class="n">the <code>TAGS</code> object</td>
+  <td><span class="en">One entry per measured value, carrying its unit, decimal places, normal band, low and high alarm limits, a plain-language line, a why line, a <code>planned</code> flag, and a <code>zh</code> twin holding the Chinese strings. Every view reads from here, so adding a tag adds it to the overview, the trends, the alarm evaluator and the export at once.</span><span class="zh">每一個量測值一筆，帶單位、小數位數、正常帶、警報上下限、一行白話、一行說明為什麼、一個 <code>planned</code> 旗標，以及一個放中文字串的 <code>zh</code> 對應物件。所有畫面都從這裡讀，所以加一個標籤，總覽、趨勢、警報判定與匯出會一次全部跟上。</span></td></tr>
+<tr><td><span class="en">Your equipment</span><span class="zh">你的設備</span></td><td class="n">the <code>DEVICES</code> object</td>
+  <td><span class="en">Pumps, valves, probes, the light panel. The <code>planned</code> flag is what draws an item dashed orange on the flow path and lists it as not built in the equipment register.</span><span class="zh">泵、閥、探針、光板。<code>planned</code> 旗標決定一個項目在流程圖上被畫成橘色虛線，並在設備清冊裡列為未製作。</span></td></tr>
+<tr><td><span class="en">Your one-touch modes</span><span class="zh">你的一鍵模式</span></td><td class="n">the <code>RECIPES</code> array</td>
+  <td><span class="en">Each recipe sets every actuator, so a half-specified recipe is a bug. Ours are Idle, Grow, Induce, Perfuse and Clean.</span><span class="zh">每個模式都要設定所有致動器，只設一半的模式就是 bug。我們的是待機、生長、誘導、灌流、清洗。</span></td></tr>
+<tr><td><span class="en">Your language</span><span class="zh">你的語言</span></td><td class="n">the <code>DICT</code> object</td>
+  <td><span class="en">Every operator-visible string is a two-element array, English then Traditional Chinese. Replacing the second element gives you your own second language; the switch, the persistence and the font stack already work. The Chinese in ours is a rewrite for a Chinese-reading grower, not a transliteration, and a third language should be treated the same way.</span><span class="zh">每一個操作員看得到的字串都是一個兩元素陣列，先英文、後繁體中文。把第二個元素換掉，就得到你自己的第二語言；切換、記憶與字型堆疊都已經寫好了。我們的中文是為讀中文的農民重寫的，不是音譯，第三種語言也應該這樣處理。</span></td></tr>
+<tr><td><span class="en">Your rig constants</span><span class="zh">你的設備常數</span></td><td class="n"><code>data/rig_constants.csv</code></td>
+  <td><span class="en">Membrane area, fibre count and bore, working volumes, viscosity, the two pressure-drop coefficients, the trans-membrane pressure ceiling and floor, the fouling multiple and the recommended operating point. Mirrored in the page; keep the two in step.</span><span class="zh">膜面積、纖維數與內徑、工作體積、黏度、兩個壓降係數、跨膜壓差上下限、結垢倍數與建議操作點。頁面裡有一份鏡像，兩邊要同步。</span></td></tr>
+<tr><td><span class="en">Your pump</span><span class="zh">你的泵</span></td><td class="n"><code>data/hfm_pump_calibration.csv</code></td>
+  <td><span class="en">Measure your own curve. Ours is nine points at 22 °C with water and does not transfer to a different pump, a different tube or a different fluid.</span><span class="zh">量你自己的曲線。我們的是 22 °C 純水下的九個點，換泵、換管、換流體都不能沿用。</span></td></tr>
+<tr><td><span class="en">Your board and protocol</span><span class="zh">你的控制板與協定</span></td><td class="n"><code>firmware/releaf_br01.ino</code></td>
+  <td><span class="en">146 lines. Change the pin map, the <code>SET</code> keys and the <code>PV</code> keys, and change the matching parser in the page. The pin map is duplicated in the interface's Setup view on purpose so the two can be checked against each other; edit both together.</span><span class="zh">146 行。改腳位對應、<code>SET</code> 的鍵名與 <code>PV</code> 的鍵名，並改頁面裡對應的解析器。腳位對應刻意在介面的「設定」畫面重複一份，讓兩邊可以互相核對；要一起改。</span></td></tr>
+<tr><td><span class="en">Your interlocks</span><span class="zh">你的連鎖保護</span></td><td class="n"><code>interlockedP01()</code>, <code>interlockedP02()</code></td>
+  <td><span class="en"><b>Put them on the microcontroller, not in the browser.</b> Each one mirrors a row of the interface's safety table; change them together. If you delete a sensor, delete the interlock that reads it rather than leaving a rule that cannot see its input.</span><span class="zh"><b>把它們放在微控制器上，不要放在瀏覽器裡。</b>每一條都對應介面安全表的一列，要一起改。如果你刪掉一個感測器，就把讀它的那條連鎖也刪掉，不要留下一條看不到自己輸入的規則。</span></td></tr>
+<tr><td><span class="en">Your panel size</span><span class="zh">你的面板尺寸</span></td><td class="n"><code>build_kiosk.py</code></td>
+  <td><span class="en">The stage is 1024×600 and scales to fill any viewport. A different panel means changing the stage constants and re-running the build.</span><span class="zh">舞台是 1024×600，會縮放去填滿任何視窗。換面板就是改舞台常數再重新建置一次。</span></td></tr>
+</tbody></table></div>
+
+<h3><span class="en">Hardware assumed</span><span class="zh">預設的硬體</span></h3>
+<ul>
+  <li><span class="en">A microcontroller that speaks a newline-delimited ASCII protocol at 115200 baud. Ours is the STM32U585 side of an Arduino Uno Q, but nothing in the page is specific to it.</span><span class="zh">一顆會講以換行分隔的 ASCII 協定、115200 baud 的微控制器。我們用的是 Arduino Uno Q 的 STM32U585 那一側，但頁面裡沒有任何東西綁定它。</span></li>
+  <li><span class="en">A browser with Web Serial, which today means Chrome or Edge on desktop or Linux. Everything except the board connection works in any browser, including offline from a file.</span><span class="zh">一個支援 Web Serial 的瀏覽器，目前實際上就是桌面版或 Linux 版的 Chrome 或 Edge。除了連板子之外，其他功能在任何瀏覽器上都能跑，包括從檔案離線開啟。</span></li>
+  <li><span class="en">Anything that can serve a directory over HTTP. A Raspberry Pi, a laptop, the Linux side of a Uno Q.</span><span class="zh">任何能用 HTTP 供應一個資料夾的東西。樹莓派、筆電、Uno Q 的 Linux 側都可以。</span></li>
+  <li><span class="en">Optional: a 7-inch panel. Ours has 1024×600 physical pixels but accepts 1920×1080 over HDMI, which is why the kiosk build scales a fixed stage rather than laying out fluidly.</span><span class="zh">選配：一片 7 吋面板。我們的實體解析度是 1024×600，但 HDMI 接受 1920×1080，這就是 kiosk 版採用固定舞台縮放而不是流動式排版的原因。</span></li>
+</ul>
+
+<div class="note"><p><b><span class="en">What we would tell a team starting from this.</span><span class="zh">如果有隊伍要從這裡起步，我們會說的話。</span></b>
+<span class="en">Take the shell and throw away our numbers. The parts worth copying are the conventions, not the constants: tag every value the rig cannot actually measure so nobody mistakes a calculation for a measurement; keep the interlocks on the microcontroller; alarm only on equipment that is supposed to be running; and write the plain-language line for every reading before you write the code that displays it, because that is the line that tells you whether you understand your own process.</span>
+<span class="zh">拿走外殼，把我們的數字丟掉。值得抄的是規約，不是常數：凡設備量不到的值都標出來，免得有人把計算當成量測；連鎖保護留在微控制器上；只對「本來就該在跑」的設備發警報；還有，在寫顯示程式之前先把每個讀值的白話說明寫出來，因為那一行會告訴你，你到底懂不懂自己的製程。</span></p></div>
+
+<!-- ================= 8 ================= -->
+<h2 id="s8">8 · <span class="en">Documentation, licence and the public repository</span><span class="zh">文件、授權與公開原始碼</span>
+  <span class="lead"><span class="en">Checked line by line against the requirements the iGEM Judge Handbook lists for a software submission.</span><span class="zh">逐條對照 iGEM 評審手冊對軟體投稿列出的要求。</span></span></h2>
+
+<div class="tw"><table>
+<thead><tr><th><span class="en">Requirement</span><span class="zh">要求</span></th><th>ReLeaf</th><th><span class="en">Where</span><span class="zh">在哪裡</span></th></tr></thead>
+<tbody>
+<tr><td><span class="en">A README explaining what the software does, who it is for, how to install and run it, and how to reproduce the main results, written so a stranger can follow it</span><span class="zh">一份 README，說明軟體做什麼、給誰用、怎麼安裝與執行、怎麼重現主要結果，寫到陌生人也看得懂</span></td>
+  <td><span class="chip c-ok">met</span></td>
+  <td><span class="en"><code>README.md</code> in the repository, plus <code>Bioreactor_UI/README.md</code> which carries the serial protocol, the pin map, the process-model constants, the design basis and the equipment register with build status.</span><span class="zh">倉庫裡的 <code>README.md</code>，加上 <code>Bioreactor_UI/README.md</code>，後者有序列協定、腳位對應、製程模型常數、設計依據，以及帶製作狀態的設備清冊。</span></td></tr>
+<tr><td><span class="en">An OSI-approved licence such as Apache 2.0, MIT or GPL-3.0. Code without a licence is legally unusable by other teams.</span><span class="zh">OSI 認可的授權，例如 Apache 2.0、MIT 或 GPL-3.0。沒有授權的程式碼，其他隊伍在法律上不能用。</span></td>
+  <td><span class="chip c-ok">met</span></td>
+  <td><span class="en"><code>LICENSE</code>, MIT. The team's earlier public reports carry CC BY 4.0, which is a documentation licence and is not OSI-approved, so the code is licensed separately and explicitly.</span><span class="zh"><code>LICENSE</code>，MIT。團隊先前的公開報告用的是 CC BY 4.0，那是文件授權、不是 OSI 認可的軟體授權，所以程式碼另外單獨、明確地授權。</span></td></tr>
+<tr><td><span class="en">Reproducible build and run instructions. The source must produce the output; compiled binaries are not acceptable in place of source.</span><span class="zh">可重現的建置與執行說明。原始碼必須能產生輸出；不接受用編譯後的執行檔取代原始碼。</span></td>
+  <td><span class="chip c-ok">met</span></td>
+  <td><span class="en">Three commands, listed in section 7. There is no binary anywhere in the repository.</span><span class="zh">三個指令，列在第 7 節。倉庫裡沒有任何執行檔。</span></td></tr>
+<tr><td><span class="en">Pinned dependencies, a committed lockfile, so the project installs exactly as tested</span><span class="zh">鎖定的相依版本、簽入的 lockfile，讓專案能照測試時的樣子安裝</span></td>
+  <td><span class="chip c-part">partial</span></td>
+  <td><span class="en">The interface has no dependencies to pin, which satisfies the requirement in the strongest possible way: there is nothing to resolve. The Python model stack does have dependencies, numpy and scipy, and <b>does not yet have a lockfile</b>. That is a real gap and it is listed in section 9.</span><span class="zh">介面沒有任何相依可鎖，這其實是最徹底地滿足這條要求：根本沒有東西需要解析。但 Python 模型程式確實有相依（numpy 與 scipy），而且<b>目前沒有 lockfile</b>。這是一個真的缺口，列在第 9 節。</span></td></tr>
+<tr><td><span class="en">A repository under 50 MB</span><span class="zh">倉庫小於 50 MB</span></td>
+  <td><span class="chip c-ok">met</span></td>
+  <td><span class="en">Under 5 MB, most of it photographs.</span><span class="zh">不到 5 MB，大部分是照片。</span></td></tr>
+<tr><td><span class="en">Hosted on iGEM's GitLab. Code hosted anywhere else is not eligible for evaluation.</span><span class="zh">必須放在 iGEM 的 GitLab 上。放在其他地方的程式碼不具評選資格。</span></td>
+  <td><span class="chip c-no">not yet</span></td>
+  <td><span class="en"><b>This repository is a GitHub draft.</b> The handbook requires <code>gitlab.igem.org/2026/software-tools/</code> and this is not that. The mirror must be pushed before the wiki freeze on 21 October 2026. We are stating this rather than letting a judge discover it.</span><span class="zh"><b>這個倉庫是放在 GitHub 上的草稿。</b>手冊要求的是 <code>gitlab.igem.org/2026/software-tools/</code>，這裡不是。鏡像必須在 2026 年 10 月 21 日 wiki 凍結之前推上去。我們主動寫出來，而不是等評審自己發現。</span></td></tr>
+</tbody></table></div>
+
+<h3><span class="en">How the interface version in this repository is kept in step</span><span class="zh">這個倉庫裡的介面版本怎麼保持同步</span></h3>
+<p><span class="en">The interface is a single file, so updating it is a single-file change. <code>ui/0906UI.html</code> is a copy of the live source at <code>Bioreactor_UI/0906UI.html</code>; the repository README records which date the copy was taken and nothing else in the repository depends on its internals. Dropping in a newer version is one file replaced and one line of the README changed.</span>
+<span class="zh">介面是單一檔案，所以更新它就是換一個檔。<code>ui/0906UI.html</code> 是 <code>Bioreactor_UI/0906UI.html</code> 這份即時原始碼的副本；倉庫的 README 記下副本取自哪一天，而倉庫裡沒有其他東西依賴它的內部結構。換上新版就是替換一個檔案、改 README 的一行。</span></p>
+
+<h3><span class="en">Against the six Best Software aspects</span><span class="zh">對照 Best Software 的六個面向</span></h3>
+<div class="tw"><table>
+<thead><tr><th><span class="en">Aspect</span><span class="zh">面向</span></th><th>ReLeaf</th><th><span class="en">Honest answer</span><span class="zh">誠實的回答</span></th></tr></thead>
+<tbody>
+<tr><td class="n">1. <span class="en">Compatibility with, and leverage of, existing synthetic biology standards</span><span class="zh">與既有合成生物學標準的相容與運用</span></td><td><span class="chip c-no">weak</span></td>
+  <td><span class="en"><b>This is our weakest line and we are not going to dress it up.</b> There is no SBOL, no SynBioHub integration, no standard interchange format. The standards this tool does follow are industrial rather than synthetic-biological: ISA-101 for the interface, and the Castillo-Hair parameterisation of CcaSR as the common vocabulary for the light layer. Export is XLSX and CSV, which is interoperable but not a synbio standard.</span><span class="zh"><b>這是我們最弱的一條，我們不打算粉飾。</b>沒有 SBOL、沒有 SynBioHub 整合、沒有標準交換格式。這個工具確實遵循的標準是工業標準而非合成生物學標準：介面用 ISA-101，光學層用 Castillo-Hair 的 CcaSR 參數化當作共同語彙。匯出是 XLSX 與 CSV，可互通但不是合成生物學標準。</span></td></tr>
+<tr><td class="n">2. <span class="en">Validated by experimental work</span><span class="zh">是否經實驗驗證</span></td><td><span class="chip c-part">partial</span></td>
+  <td><span class="en">Two models validated on our own measured data. Nine not. Section 6 lists exactly which experiments close the gap. The strongest experimental result the software has produced is not a model fit at all: the measurement trust layer found a real instrument failure in a real run, 26.7 h before that instrument's output became unusable.</span><span class="zh">兩個模型以我們自己量到的數據驗證過。九個沒有。第 6 節明確列出哪些實驗能補上落差。這套軟體產出的最強實驗結果其實不是模型擬合：量測信任層在一次真實長跑中找到一次真實的儀器失效，比該儀器輸出變得不可用早了 26.7 小時。</span></td></tr>
+<tr><td class="n">3. <span class="en">Useful to other projects</span><span class="zh">對其他專案是否有用</span></td><td><span class="chip c-part">partial</span></td>
+  <td><span class="en">Section 7 is written to make this answerable rather than asserted. The shell generalises; the process model does not, and does not claim to. No other team has used it yet, so this is a designed-for claim, not a demonstrated one.</span><span class="zh">第 7 節是寫來讓這一題可以被回答，而不是被宣稱。外殼可以通用，製程模型不行，也沒有宣稱可以。目前還沒有其他隊伍用過，所以這是「設計上支援」，不是「已經證明」。</span></td></tr>
+<tr><td class="n">4. <span class="en">Integration with external tools</span><span class="zh">與外部工具的整合</span></td><td><span class="chip c-part">partial</span></td>
+  <td><span class="en">Two integration surfaces exist and are documented: a serial protocol any microcontroller can implement, and a batch export that opens directly in Excel with units on every column and numbers stored as numbers. There is no API and no container, because the deployment target is a device with no network.</span><span class="zh">有兩個整合介面，而且都有文件：一個任何微控制器都能實作的序列協定，以及一個可以直接在 Excel 開啟的批次匯出（每欄有單位、數字以數值型態儲存）。沒有 API、沒有容器，因為部署目標是一台沒有網路的裝置。</span></td></tr>
+<tr><td class="n">5. <span class="en">User-friendly</span><span class="zh">是否易用</span></td><td><span class="chip c-ok">strong</span></td>
+  <td><span class="en">This is the aspect the whole project bends toward, because the user is a grower and not a scientist. Plain-language subtitles under every reading, analog context so that "is 6.4 good?" is answerable without training, one-touch recipes, an alarm model designed to avoid the nuisance alarms that teach people to ignore alarm lists, full Traditional Chinese, and touch targets sized for a panel. <b>It has not been tested with an actual farmer.</b> That is listed in section 9.</span><span class="zh">這是整個專案傾力的面向，因為使用者是農民不是科學家。每個讀值下面有白話副標；類比脈絡讓「6.4 到底好不好？」不必受訓也答得出來；一鍵模式；警報模型刻意避開那種會教人忽略警報清單的擾人警報；完整繁體中文；面板尺寸的觸控目標。<b>但它還沒有給真正的農民測試過。</b>這一點列在第 9 節。</span></td></tr>
+<tr><td class="n">6. <span class="en">Written and documented for future groups to extend</span><span class="zh">寫法與文件是否便於後續團隊延伸</span></td><td><span class="chip c-part">partial</span></td>
+  <td><span class="en">Documented: yes, thoroughly, including the reasoning behind decisions rather than only their outcome. Written to extend: partly. One 3,139-line file with numbered section banners is navigable but it is not modular, and there are no tests. We chose that deliberately, for the reasons in section 2, and the cost is stated there too.</span><span class="zh">文件：是，而且很完整，包括決策的理由而不只是結果。便於延伸：部分。一個 3,139 行、以編號區段標示的檔案可以導覽，但它不是模組化的，而且沒有測試。我們是刻意這樣選的，理由寫在第 2 節，代價也寫在那裡。</span></td></tr>
+</tbody></table></div>
+
+<!-- ================= 9 ================= -->
+<h2 id="s9">9 · <span class="en">Limitations and what we did not do</span><span class="zh">限制與我們沒做的事</span>
+  <span class="lead"><span class="en">This list is not exhaustive, and absence from it proves nothing.</span><span class="zh">這份清單不完整，沒有列在上面不代表沒有問題。</span></span></h2>
+
+<h4><span class="en">Things that are not what they look like</span><span class="zh">看起來不是那樣的東西</span></h4>
+<ul>
+  <li><span class="en"><b>The process values in the demonstration build are simulated.</b> Open the file on a laptop and the numbers move, but they are a simulation so the interface can be shown without a rig. Real values require a board on the other end of the serial link.</span><span class="zh"><b>展示版的製程數值是模擬的。</b>在筆電上打開，數字會動，但那是模擬，好讓介面在沒有設備時也能展示。真實數值需要序列連線另一端接上控制板。</span></li>
+  <li><span class="en"><b>The weather is a manual snapshot, not a live feed.</b> The Environment view computes real indices from real numbers, but somebody pasted those numbers in. The code flags this with <code>live: false</code>.</span><span class="zh"><b>氣象是人工快照，不是即時資料。</b>環境畫面確實用真實數字算出真實指標，但那些數字是有人貼進去的。程式用 <code>live: false</code> 標示這件事。</span></li>
+  <li><span class="en"><b>The trust layer is not on the board.</b> It is Python on a laptop. The interface uses a hand-written stand-in scoring function in its place, and the code comment says so. The 26.7 h lead time is a retrospective result on a completed log, not something the reactor did live.</span><span class="zh"><b>信任層不在控制板上。</b>它是跑在筆電上的 Python。介面用一個手寫的替代評分函式頂著，程式註解裡有寫。26.7 小時的提前量是對一份已完成記錄的回溯結果，不是反應器當場做到的事。</span></li>
+  <li><span class="en"><b>PT-04 and PT-05 are derived, not characterised.</b> They come off the lumen pump curve. The shell side has never been characterised on this rig, so treat both as indicative.</span><span class="zh"><b>PT-04 與 PT-05 是推算的，不是特性化來的。</b>它們是從管腔側泵曲線推出來的。殼側從來沒有在這台設備上做過特性化，所以兩個都只能當指示值看。</span></li>
+</ul>
+
+<h4><span class="en">Things we did not build</span><span class="zh">我們沒有做的東西</span></h4>
+<ul>
+  <li><span class="en">No unit tests, no continuous integration, no static analysis. For a file that can move a pump, this is the omission we are least comfortable with.</span><span class="zh">沒有單元測試、沒有持續整合、沒有靜態分析。對一個能讓泵動起來的檔案來說，這是我們最不安的一項疏漏。</span></li>
+  <li><span class="en">No lockfile for the Python model stack, which does have dependencies. The interface has none, but the model half is not reproducible to the standard the handbook asks for.</span><span class="zh">Python 模型程式沒有 lockfile，而它確實有相依套件。介面沒有相依，但模型那一半還沒達到手冊要求的可重現標準。</span></li>
+  <li><span class="en">No SBOL, no SynBioHub, no Registry integration. Aspect 1 of the software rubric, and we do not meet it.</span><span class="zh">沒有 SBOL、沒有 SynBioHub、沒有 Registry 整合。軟體評分的第 1 個面向，我們沒有達成。</span></li>
+  <li><span class="en">No closed loop, no model predictive control, no optimiser wired to an actuator. Deliberate. The finding in section 5 is that a threshold closed loop on our own data is not better than a fixed recipe, and we would rather ship no loop than a loop we cannot defend.</span><span class="zh">沒有閉迴路、沒有模型預測控制、沒有接到致動器的最佳化器。這是刻意的。第 5 節的發現是：在我們自己的數據上，門檻式閉迴路並不比固定配方好，而我們寧可不出閉迴路，也不要出一個自己辯護不了的閉迴路。</span></li>
+  <li><span class="en">No accessibility audit. Focus states and touch target sizes were designed for, contrast was checked by eye, and neither was tested with assistive technology or with a colour-vision-deficient reader.</span><span class="zh">沒有做無障礙稽核。焦點狀態與觸控目標尺寸是有設計過的，對比度是用眼睛檢查的，兩者都沒有用輔助科技或色覺異常的讀者測試過。</span></li>
+  <li><span class="en">No user testing with a farmer. The interface is designed for a grower and has been reviewed only by the team and its advisors. Until a grower has sat in front of it, every usability claim on this page is a design intention.</span><span class="zh">沒有給農民做過使用者測試。介面是為農民設計的，但至今只有團隊與指導老師看過。在農民真的坐到它前面之前，本頁所有關於易用性的主張都只是設計意圖。</span></li>
+</ul>
+
+<h4><span class="en">Things we got wrong and fixed</span><span class="zh">我們做錯又改回來的事</span></h4>
+<ul>
+  <li><span class="en"><b>The light direction was reversed in an earlier draft.</b> Green switches the CcaS/CcaR system on in <i>B. subtilis</i> and red switches it off. An early version of the interface had it the other way round, which would have driven the panel red on the Induce recipe. It is now stated in the README, in the firmware comment beside the two digital writes, and in the interface, because it is the single easiest thing on this project to get backwards.</span><span class="zh"><b>早期草稿把光的方向寫反了。</b>綠光把<i>枯草桿菌</i>的 CcaS/CcaR 打開，紅光關掉它。早期版本的介面寫反了，那會讓「誘導」模式把光板打成紅色。現在這件事寫在 README、寫在韌體那兩行數位輸出旁邊的註解、也寫在介面上，因為它是這個專案裡最容易搞反的一件事。</span></li>
+  <li><span class="en"><b>An earlier internal report said neither our photometer nor the BioDrop was usable above OD 1.2.</b> Scored against known TiO₂ dose rather than against each other, the instrument that misbehaves at high concentration is the BioDrop. The old sentence put both in the same basket and was not accurate enough. Corrected in section 6.</span><span class="zh"><b>早先一份內部報告說我們的光度計與 BioDrop 在 OD 1.2 以上都不能用。</b>若以已知的 TiO₂ 劑量而非彼此對照來評分，高濃度時出問題的是 BioDrop。舊的那句話把兩台放進同一個籃子，不夠精確。已在第 6 節更正。</span></li>
+  <li><span class="en"><b>A dry-running interlock was deleted rather than left blind</b> when the tank level sensor was removed from the design. Deleting a safety rule is uncomfortable and is recorded rather than quietly done.</span><span class="zh"><b>液位感測器從設計中移除時，防乾轉連鎖是被刪掉、而不是被留下來瞎跑。</b>刪掉一條安全規則讓人不舒服，所以這件事被記錄下來，而不是默默處理掉。</span></li>
+</ul>
+
+<h4><span class="en">Open questions on the rig itself</span><span class="zh">設備本身還沒解的問題</span></h4>
+<ul>
+  <li><span class="en">V-03 had no remaining function once the shell loop lost its valves and was removed. It was not on the removal list, and whether it should come back somewhere is unconfirmed.</span><span class="zh">殼側迴路的閥拿掉後，V-03 就沒有功能了，因此被移除。它原本不在移除清單上，是不是該在別的地方回來，尚未確認。</span></li>
+  <li><span class="en">PT-03 appeared on both the removal list and the relocation instruction. It is kept and moved under the module on the lumen side, which is what the relocation asked for. If it should be gone entirely, that has not been said.</span><span class="zh">PT-03 同時出現在移除清單與搬移指示上。目前保留，並依搬移指示移到模組下方的管腔側。如果它應該完全拿掉，目前沒有人這樣說過。</span></li>
+  <li><span class="en">The orange circle marked D on the whiteboard schematic is currently drawn as D-01, a bubble trap or pulsation damper. Unconfirmed.</span><span class="zh">白板草圖上標記為 D 的橘色圓圈，目前畫成 D-01，也就是氣泡阻集器或脈動阻尼器。未確認。</span></li>
+  <li><span class="en">The membrane cutoff decision is not a note-keeping discrepancy. 0.2 µm and 50 kDa are two different devices with opposite consequences, and only one of them makes "passes only protein" true. The module fitted is 0.2 µm microfiltration.</span><span class="zh">膜的截留選擇不是記錄上的小出入。0.2 µm 與 50 kDa 是兩台不同的裝置，後果相反，而只有其中一個能讓「只讓蛋白質通過」成立。目前裝的是 0.2 µm 微過濾。</span></li>
+</ul>
+
+<!-- ================= 10 ================= -->
+<h2 id="s10">10 · <span class="en">References</span><span class="zh">參考文獻</span></h2>
+<ol class="refs">
+<li>Castillo-Hair SM, Baerman EA, Fujita M, Igoshin OA, Tabor JJ (2019). Optogenetic control of <i>Bacillus subtilis</i> gene expression. <i>Nature Communications</i> 10:3099. DOI <a href="https://doi.org/10.1038/s41467-019-10906-6">10.1038/s41467-019-10906-6</a>. <span class="en">Source of the CcaSR Hill parameters, the time constants and the MEFL figures used throughout sections 3, 4 and 6.</span><span class="zh">第 3、4、6 節所用 CcaSR Hill 參數、時間常數與 MEFL 數值的來源。</span></li>
+<li>Gerhardt KP, Olson EJ, Castillo-Hair SM, Hartsough LA, Landry BP, Ekness F, Yokoo R, Gomez EJ, Ramakrishnan P, Suh J, Savage DF, Tabor JJ (2016). An open-hardware platform for optogenetics and photobiology. <i>Scientific Reports</i> 6:35363. DOI <a href="https://doi.org/10.1038/srep35363">10.1038/srep35363</a>. <span class="en">The Light Plate Apparatus design our light hardware is built to.</span><span class="zh">我們的光學硬體所依循的 Light Plate Apparatus 設計。</span></li>
+<li>Haller DJ, Castillo-Hair SM, Tabor JJ (2025). Optogenetic control of <i>B. subtilis</i> gene expression using the CcaSR system. In: Baumschlager A (ed.), <i>Optogenetics: Methods and Protocols</i>, Methods in Molecular Biology vol. 2840, chapter 1. DOI <a href="https://doi.org/10.1007/978-1-0716-4047-0_1">10.1007/978-1-0716-4047-0_1</a>. <span class="en">Source of the 535 nm CcaS absorption maximum and the growth and light-treatment protocols behind experiment E1.</span><span class="zh">535 nm CcaS 吸收峰，以及實驗 E1 所依據的培養與光處理流程的來源。</span></li>
+<li>Portela RMC, Varsakelis C, Richelle A, Giannelos N, Pence J, Dessoy S, von Stosch M (2021, published online 2020). When is an in silico representation a digital twin? A biopharmaceutical industry approach to the digital twin concept. <i>Advances in Biochemical Engineering/Biotechnology</i> 176:35–56. DOI <a href="https://doi.org/10.1007/10_2020_138">10.1007/10_2020_138</a>. <span class="en">The connectivity triad and the nine-step build list scored in section 5.</span><span class="zh">第 5 節評分所用的連通性三元組與九步建置清單。</span></li>
+<li>Zobel-Roos S, Schmidt A, Uhlenbrock L, Ditz R, Köster D, Strube J (2021, published online 2020). Digital twins in biomanufacturing. <i>Advances in Biochemical Engineering/Biotechnology</i> 176:181–262. DOI <a href="https://doi.org/10.1007/10_2020_146">10.1007/10_2020_146</a>. <span class="en">Table 1's model-type taxonomy and the predictive versus non-predictive distinction used in section 4, the QbD and PAT chain in section 5, and the Sargent validation criterion.</span><span class="zh">第 4 節所用的表 1 模型類型分類與預測／非預測之分，第 5 節的 QbD 與 PAT 鏈，以及 Sargent 驗證準則。</span></li>
+<li>Gargalo CL, Caño de las Heras S, Jones MN, Udugama I, Mansouri SS, Krühne U, Gernaey KV (2021, published online 2020). Towards the development of digital twins for the bio-manufacturing industry. <i>Advances in Biochemical Engineering/Biotechnology</i> 176:1–34. DOI <a href="https://doi.org/10.1007/10_2020_142">10.1007/10_2020_142</a>. <span class="en">The digital shadow definition: one-way automated dataflow, physical to digital only.</span><span class="zh">數位影子的定義：單向自動資料流，只有實體到數位。</span></li>
+<li>Wang X, Yu H, Zhang X, et al. (2022). PAMP-induced secreted peptide 3 modulates salt tolerance through receptor-like kinase 7 in plants. <i>International Journal of Molecular Sciences</i> 23:3090. <span class="en">Source of the BoPep4 sequence, its 2408.3 Da mass and the 100 nM effective dose against 200 mM NaCl that model M8 is compared to.</span><span class="zh">BoPep4 序列、2408.3 Da 分子量，以及模型 M8 用來比較的、對抗 200 mM NaCl 的 100 nM 有效劑量的來源。</span></li>
+<li>ISA-101, Human Machine Interfaces for Process Automation Systems. <span class="en">The high-performance HMI standard behind Emerson DeltaV Live, Sartorius Biostat and Eppendorf BioFlo, and the design basis for the whole interface.</span><span class="zh">Emerson DeltaV Live、Sartorius Biostat 與 Eppendorf BioFlo 背後的高效能 HMI 標準，也是整個介面的設計依據。</span></li>
+<li>iGEM Foundation (2026). <i>2026 Judge Handbook</i>. <span class="en">The software requirements and the six Best Software aspects checked in section 8, and the Hardware aspects the interface documentation is written against.</span><span class="zh">第 8 節所檢核的軟體要求與 Best Software 六個面向，以及介面文件所對照的 Hardware 面向。</span></li>
+</ol>
+
+<h4><span class="en">Project files every number on this page resolves to</span><span class="zh">本頁每一個數字所對應的專案檔案</span></h4>
+<ul style="font-size:14px">
+<li><code>Bioreactor_UI/README.md</code> <span class="en">design basis, serial protocol, pin map, equipment register, process model constants</span><span class="zh">設計依據、序列協定、腳位對應、設備清冊、製程模型常數</span></li>
+<li><code>Bioreactor_UI/0906UI.html</code> <span class="en">the interface, copied into this repository as <code>ui/0906UI.html</code></span><span class="zh">介面本身，複製到本倉庫的 <code>ui/0906UI.html</code></span></li>
+<li><code>Bioreactor_UI/firmware/releaf_br01.ino</code> <span class="en">the interlocks and the 1 Hz scan</span><span class="zh">連鎖保護與 1 Hz 掃描</span></li>
+<li><code>Bioreactor_UI/data/od600_growth_run_20260721.csv</code> <span class="en">the 434-hour run, 221 binned points, plotted in section 4</span><span class="zh">434 小時長跑，221 個歸併點，繪於第 4 節</span></li>
+<li><code>Bioreactor_UI/data/hfm_pump_calibration.csv</code> <span class="en">the measured pump curve, model M1</span><span class="zh">實測泵曲線，模型 M1</span></li>
+<li><code>Bioreactor_UI/data/rig_constants.csv</code> <span class="en">membrane geometry, fit coefficients, limits</span><span class="zh">膜幾何、擬合係數、上下限</span></li>
+<li><code>Math Model/releaf-model/params/parameters.yaml</code> <span class="en">every parameter with a fixed, lit, calc or verify tag. Nothing tagged verify may be reported as a result.</span><span class="zh">每個參數都帶 fixed、lit、calc 或 verify 標籤。凡標為 verify 的都不得當成結果報出。</span></li>
+<li><code>Math Model/releaf-model/out/sentinel.json</code> <span class="en">the trust layer, the lead time and the calibration audit</span><span class="zh">信任層、提前量與校正稽核</span></li>
+<li><code>Math Model/releaf-model/data/photometer_20260721.csv</code> <span class="en">2,671 valid rows, the source of the two-event finding</span><span class="zh">2,671 筆有效資料，兩事件發現的來源</span></li>
+<li><code>Opto_Math/2019_Castillo_Math.pdf</code> <span class="en">the Hill function and the kinetic model, as written by the original author</span><span class="zh">Hill 函數與動力學模型，原作者自己寫的版本</span></li>
+<li><code>WikiHomepage/PROJECT_BRIEF.md</code> <span class="en">the rules this page was written under, including the prohibition on any cost claim</span><span class="zh">本頁遵循的寫作規則，包含禁止任何成本主張</span></li>
+</ul>
+
+</div>
+
+<footer><div class="wrap">
+  <p><b>ReLeaf · GEMS-Taiwan · iGEM 2026 · Biomanufacturing Village</b></p>
+  <p><span class="en">Every figure on this page resolves to a named file in the project. Numbers taken from the literature are marked as such in the same sentence. Nothing marked <i>verify</i> in the project's parameter file is reported here as a result. This page makes no claim about the cost of the bioreactor, because no bill of materials total exists.</span>
+  <span class="zh">本頁每一個數字都對應到專案中一個具名檔案。取自文獻的數字都在同一句話裡標明。專案參數檔中標為 <i>verify</i> 的項目，一律沒有在此當成結果報出。本頁對生物反應器的成本不作任何主張，因為沒有任何物料清單總價存在。</span></p>
+  <p><span class="en">Interface source, this page and its figures: <a href="https://github.com/Timmy97-TW/releaf-wiki-software">github.com/Timmy97-TW/releaf-wiki-software</a>. Code under the MIT licence.</span>
+  <span class="zh">介面原始碼、本頁與圖表：<a href="https://github.com/Timmy97-TW/releaf-wiki-software">github.com/Timmy97-TW/releaf-wiki-software</a>。程式碼採 MIT 授權。</span></p>
+</div></footer>
+
+<script>
+(function(){
+"use strict";
+function lsGet(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } }
+function lsSet(k,v){ try{ localStorage.setItem(k,v); }catch(e){} }
+
+window.setLang = function(l){
+  var r = document.documentElement;
+  r.setAttribute("data-lang", l);
+  r.setAttribute("lang", l === "zh" ? "zh-Hant" : "en");
+  document.getElementById("b-en").setAttribute("aria-pressed", String(l === "en"));
+  document.getElementById("b-zh").setAttribute("aria-pressed", String(l === "zh"));
+  lsSet("releaf.software.lang", l);
+};
+setLang(lsGet("releaf.software.lang") === "zh" ? "zh" : "en");
+
+/* ------------------------------------------------------------------
+   The 434-hour growth run, drawn from the real binned file.
+   Source: Bioreactor_UI/data/od600_growth_run_20260721.csv
+   221 points, elapsed_h then od600_au, flat pairs.
+   Nothing here is smoothed, resampled or invented.
+   ------------------------------------------------------------------ */
+var OD = [1,0.0875,3,0.0974,4.9,0.1151,6.9,0.1189,8.9,0.2026,10.9,0.2597,12.8,0.2573,14.8,0.2891,16.8,0.3243,18.8,0.3515,20.7,0.3726,22.7,0.3938,24.7,0.424,26.6,0.4411,28.6,0.4657,30.6,0.4824,32.6,0.5011,34.5,0.517,36.5,0.5384,38.5,0.5456,40.5,0.559,42.4,0.5746,44.4,0.5822,46.4,0.6014,48.4,0.6179,50.3,0.6251,52.3,0.6318,54.3,0.6377,56.2,0.6518,58.2,0.6658,60.2,0.676,62.2,0.6869,64.1,0.7139,66.1,0.7233,68.1,0.7151,70.1,0.7174,72,0.73,74,0.7511,76,0.7638,78,0.7755,79.9,0.7726,81.9,0.791,83.9,0.8087,85.9,0.8345,87.8,0.839,89.8,0.8508,91.8,0.8716,93.8,0.8571,95.7,0.8828,97.7,0.8946,99.7,0.9083,101.6,0.9097,103.6,0.9078,105.6,0.8939,107.6,0.93,109.5,0.9303,111.5,0.9366,113.5,0.9375,115.5,0.9319,117.4,0.9335,119.4,0.9469,121.4,0.9429,123.3,0.9276,125.3,0.9253,127.3,0.915,129.3,0.8979,131.2,0.8822,133.2,0.8804,135.2,0.8568,137.2,0.8493,139.1,0.8279,141.1,0.7806,143.1,0.7647,145.1,0.7342,147,0.7217,149,0.7055,151,0.6851,153,0.6737,154.9,0.6872,156.9,0.7049,158.9,0.714,160.8,0.7379,162.8,0.7541,164.8,0.7653,166.8,0.794,168.8,0.8014,170.7,0.8341,172.7,0.849,174.7,0.8683,176.6,0.8974,178.6,0.9387,180.6,1.0023,182.6,1.0494,184.5,1.0819,186.5,1.1183,188.5,1.151,190.5,1.1996,192.4,1.2442,194.4,1.2793,196.4,1.3087,198.3,1.3358,200.3,1.3618,202.3,1.3822,204.3,1.4045,206.2,1.4238,208.2,1.4356,210.2,1.4498,212.2,1.458,214.1,1.4743,216.1,1.4653,218.1,1.4449,220.1,1.467,222,1.4726,224,1.4739,226,1.4723,228,1.48,229.9,1.4729,231.9,1.4682,233.9,1.4775,235.8,1.4796,237.8,1.4676,239.8,1.4656,241.8,1.4643,243.8,1.4913,245.7,1.1772,247.7,1.4502,249.7,1.4681,251.6,1.457,253.6,1.4885,255.6,1.434,257.6,1.4576,259.5,1.4299,261.5,1.4643,263.5,1.4753,265.5,1.4798,267.4,1.4826,269.4,1.4738,271.4,1.4887,273.4,1.4868,275.3,1.4684,277.3,1.4676,279.3,1.4622,281.2,1.4327,283.2,1.2976,285.2,1.4583,287.2,1.3219,289.1,1.4956,291.1,1.4838,293.1,1.4557,295.1,1.46,297,1.4723,299,1.454,301,1.4657,303,1.4624,304.9,1.44,306.9,1.4631,308.9,1.4604,310.9,1.425,312.8,1.4451,314.8,1.4286,316.8,1.4358,318.8,1.4122,320.7,1.3845,322.7,1.3964,324.7,1.4128,326.6,1.3931,328.6,1.389,330.6,1.3988,332.6,1.3514,334.5,1.3584,336.5,1.3361,338.5,1.3533,340.5,1.3465,342.4,1.3194,344.4,1.3143,346.4,1.3036,348.4,1.3225,350.3,1.3024,352.3,1.3201,354.3,1.3004,356.2,1.2696,358.2,1.26,360.2,1.2546,362.2,1.2566,364.1,1.2335,366.1,1.2369,368.1,1.2503,370.1,1.2247,372,1.23,374,1.2081,376,1.2027,378,1.2025,379.9,1.191,381.9,1.178,383.9,1.1764,385.9,1.1586,387.8,1.1557,389.8,1.1253,391.8,1.152,393.8,1.1521,395.7,1.1557,397.7,1.1284,399.7,1.1414,401.6,1.1169,403.6,1.1395,405.6,1.1252,407.6,1.1217,409.5,1.1108,411.5,1.0908,413.5,1.0829,415.5,1.0839,417.4,1.0949,419.4,1.0922,421.4,1.0801,423.4,1.0847,425.3,1.0554,427.3,1.0562,429.3,1.0586,431.2,1.0798,433.2,1.0782,435.2,1.0556];
+
+(function drawGrowth(){
+  var g = document.getElementById("gc");
+  if(!g) return;
+  var W = 900, H = 340, L = 58, R = 22, T = 22, B = 44;
+  var xw = W - L - R, yh = H - T - B;
+  var xmax = 440, ymax = 1.6;
+  function X(h){ return L + h / xmax * xw; }
+  function Y(v){ return T + yh - v / ymax * yh; }
+  var o = [];
+  function esc(s){ return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;"); }
+  function txt(x,y,s,a){
+    a = a || {};
+    return '<text x="'+x+'" y="'+y+'" font-size="'+(a.fs||11)+'" fill="'+(a.fill||"#6b7f75")+'"'
+      + ' text-anchor="'+(a.anchor||"start")+'"'
+      + ' font-family="'+(a.mono?'ui-monospace,Menlo,monospace':'-apple-system,\'Noto Sans TC\',sans-serif')+'"'
+      + (a.weight?' font-weight="'+a.weight+'"':'')+'>'+esc(s)+'</text>';
+  }
+  /* the two marked windows */
+  o.push('<rect x="'+X(120)+'" y="'+T+'" width="'+(X(160)-X(120))+'" height="'+yh+'" fill="#f3e6d4"/>');
+  o.push('<rect x="'+X(240)+'" y="'+T+'" width="'+(X(300)-X(240))+'" height="'+yh+'" fill="#f6e2de"/>');
+  /* grid */
+  for(var v=0; v<=1.6; v+=0.4){
+    o.push('<line x1="'+L+'" y1="'+Y(v)+'" x2="'+(W-R)+'" y2="'+Y(v)+'" stroke="#e4ece8" stroke-width="1"/>');
+    o.push(txt(L-9, Y(v)+4, v.toFixed(1), {anchor:"end", mono:true}));
+  }
+  for(var h=0; h<=440; h+=80){
+    o.push('<line x1="'+X(h)+'" y1="'+T+'" x2="'+X(h)+'" y2="'+(T+yh)+'" stroke="#eef3f1" stroke-width="1"/>');
+    o.push(txt(X(h), T+yh+18, String(h), {anchor:"middle", mono:true}));
+  }
+  /* the series */
+  var d = "";
+  for(var i=0; i<OD.length; i+=2){
+    d += (i ? "L" : "M") + X(OD[i]).toFixed(1) + " " + Y(OD[i+1]).toFixed(1) + " ";
+  }
+  o.push('<path d="'+d+'" fill="none" stroke="#1c6a4d" stroke-width="1.7" stroke-linejoin="round"/>');
+  /* axis labels and annotations */
+  o.push(txt(L, T-7, "OD600", {fs:11, weight:600, fill:"#3d5148"}));
+  o.push(txt(W-R, T+yh+34, "elapsed hours", {anchor:"end", fs:11}));
+  o.push(txt((X(120)+X(160))/2, T+14, "120–160 h", {anchor:"middle", fs:10.5, mono:true, fill:"#8a5410", weight:600}));
+  o.push(txt((X(120)+X(160))/2, T+27, "process event", {anchor:"middle", fs:10, fill:"#8a5410"}));
+  o.push(txt((X(240)+X(300))/2, T+14, "240–300 h", {anchor:"middle", fs:10.5, mono:true, fill:"#8c352b", weight:600}));
+  o.push(txt((X(240)+X(300))/2, T+27, "instrument event", {anchor:"middle", fs:10, fill:"#8c352b"}));
+  o.push('<line x1="'+L+'" y1="'+(T+yh)+'" x2="'+(W-R)+'" y2="'+(T+yh)+'" stroke="#c3d3cb" stroke-width="1"/>');
+  o.push('<line x1="'+L+'" y1="'+T+'" x2="'+L+'" y2="'+(T+yh)+'" stroke="#c3d3cb" stroke-width="1"/>');
+  g.innerHTML = o.join("");
+})();
+})();
+</script>
+</body>
+</html>
