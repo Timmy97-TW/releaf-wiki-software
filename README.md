@@ -28,7 +28,7 @@ rather than in a facility. The operator interface is written for a grower who ha
 never used lab equipment, not for a trained bioprocess operator.
 
 Eight views: Overview, Flow path (a real P&ID), Trends, Alarms, Data, Setup,
-Environment, and Digital twin. Design basis is **ISA-101 High Performance HMI** —
+Environment, and Twin. Design basis is **ISA-101 High Performance HMI** —
 grey canvas with colour reserved for abnormal conditions, a four-level display
 hierarchy, analog context on every value, always-visible sparklines, one-touch
 recipes, and an alarm model that will not fire on equipment the operator
@@ -49,8 +49,15 @@ OFF.** This is the single easiest fact on the project to get backwards.
 |---|---|
 | File | `ui/0906UI.html` |
 | Copied from | `Bioreactor_UI/0906UI.html` in the team's working project |
-| Copy taken | **2026-09-06** |
+| Copy taken | **2026-09-06, 18:49 CST** |
+| Lines | 4,165 |
+| SHA-256 | `4f3a97336cc14c95c9769a8bb606df68be275ef64c9eb42046b44977dc9875ba` |
 | Size | single file, vanilla JavaScript, zero dependencies |
+
+This build is the one audited in `Bioreactor_UI/docs/DIGITAL_TWIN_CRITERIA.md`. It is
+the build in which the page first reads the firmware's `PV` telemetry stream, so the
+link between rig and software became two-way on this date. Screenshots of it are in
+`assets/ui-*.png`.
 
 The interface is a single file, so replacing it is a **one-file change**. Nothing
 else in this repository depends on its internals. To drop in a newer build:
@@ -142,16 +149,26 @@ plain-language line for a reading before you write the code that displays it.
 
 The page says this at length and it belongs here too:
 
-- **It is not a digital twin.** Data flows automatically from the reactor to the
-  software. It does not flow automatically back. By the definition in Portela et
-  al. (2021) this is a digital shadow with a manual actuation path. Section 5 of
-  the page scores it against the nine-step build list honestly: three met, four
-  partial, two not met.
+- **The defensible sentence is not "we built a digital twin".** It is that we built a
+  twin-shaped interface in which two models are calibrated, none is validated, and we
+  can name every gap. The two-way link is real — telemetry in at 1 Hz, command frames
+  out — **but only while a board is plugged in**, and with the cable out the interface
+  prints a banner saying so and calling itself an operator interface with a simulator
+  behind it. Section 5 of the page scores the Portela nine-step list honestly: one
+  done, five partial, three not done.
+- **Calibrated is not validated.** Two of eleven models are calibrated against measured
+  rig data. **None is validated against data it was not fitted to.** Seven of the eleven
+  rows in the interface's own model register say NOT VALIDATED on the table, not in a
+  footnote.
 - **There is no closed loop** and no model predictive control. Deliberate — on our
   own 434-hour run, a threshold closed loop is not better than a fixed recipe.
-- **Nine of eleven models are not validated** on our own data. Section 6 lists the
-  sixteen wet-lab measurements that would close the gap, with the experiment for
-  each.
+- **The growth curve is a replay, not a model.** A real 434-hour run is good data;
+  replaying it is not prediction, and everything downstream of the OD channel inherits
+  n = 1.
+- **The fouling rate is invented**, and it drives the only maintenance decision in the
+  product. Section 6 lists the eighteen wet-lab measurements that would close the gaps,
+  with the experiment for each; the fouling run and the end-to-end lead time are the two
+  worth doing first.
 - **The light layer is entirely literature.** The Hill parameters come from
   Castillo-Hair et al. (2019). No induction curve exists in our hands.
 - **No unit tests, no CI**, and no lockfile for the Python model half.
